@@ -1,18 +1,23 @@
-import { Routes, Route } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout.jsx'
 import Dashboard from './pages/Dashboard.jsx'
-import Mailboxes from './pages/Mailboxes.jsx'
+import CompanyInfo from './pages/CompanyInfo.jsx'
+import Agents from './pages/Agents.jsx'
 import Outreach from './pages/Outreach.jsx'
-import Conversations from './pages/Conversations.jsx'
-import Leads from './pages/Leads.jsx'
-import Settings from './pages/Settings.jsx'
+import Emails from './pages/Emails.jsx'
+
 export default function App() {
-  return (<Routes><Route element={<Layout />}>
-    <Route index element={<Dashboard />} />
-    <Route path="mailboxes" element={<Mailboxes />} />
-    <Route path="outreach" element={<Outreach />} />
-    <Route path="conversations" element={<Conversations />} />
-    <Route path="leads" element={<Leads />} />
-    <Route path="settings" element={<Settings />} />
-  </Route></Routes>)
+  return (
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<Dashboard />} />
+        <Route path="company-info" element={<CompanyInfo />} />
+        <Route path="agents" element={<Agents />} />
+        <Route path="agents/:id" element={<Agents />} />
+        <Route path="outreach" element={<Outreach />} />
+        <Route path="emails" element={<Emails />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
+  )
 }

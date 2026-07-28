@@ -17,6 +17,13 @@ export default {
         faint: 'var(--faint)',
         dim: 'var(--dim)',
         info: { DEFAULT: 'var(--info)', soft: 'var(--info-soft)', ink: 'var(--info-ink)' },
+        sidebar: {
+          DEFAULT: 'var(--sidebar)',
+          ink: 'var(--sidebar-ink)',
+          active: 'var(--sidebar-active)',
+          line: 'var(--sidebar-line)',
+          label: 'var(--sidebar-label)',
+        },
         accent: {
           DEFAULT: 'var(--accent)',
           hover: 'var(--accent-hover)',
@@ -35,11 +42,11 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
       },
-      // Card and panel silhouette: 14px corner radius.
+      // Tighter than a consumer app: enterprise UI reads sharper.
       borderRadius: {
-        lg: '10px',
-        xl: '14px',
-        '2xl': '18px',
+        lg: '8px',
+        xl: '10px',
+        '2xl': '12px',
       },
       keyframes: {
         'fade-up': { '0%': { opacity: 0, transform: 'translateY(4px)' }, '100%': { opacity: 1, transform: 'none' } },

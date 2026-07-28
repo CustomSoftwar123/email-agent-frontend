@@ -38,7 +38,7 @@ function columnPath(x, y, w, h, r) {
  * 12-point trend line for a stat tile. No axes, no labels — the tile's value
  * carries the number; this only carries the shape.
  */
-export function Sparkline({ data, width = 104, height = 30 }) {
+export function Sparkline({ data, width = 104, height = 30, color = 'var(--accent)', ring = 'var(--surface)' }) {
   const values = data ?? []
   if (values.length < 2) return <div style={{ width, height }} />
 
@@ -54,15 +54,15 @@ export function Sparkline({ data, width = 104, height = 30 }) {
 
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
-      <path d={area} fill="var(--accent)" opacity="0.1" />
-      <path d={line} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={area} fill={color} opacity="0.18" />
+      <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       {/* End marker carries a 2px surface ring so it stays legible over the line. */}
       <circle
         cx={x(values.length - 1)}
         cy={y(values[values.length - 1])}
         r="4"
-        fill="var(--accent)"
-        stroke="var(--surface)"
+        fill={color}
+        stroke={ring}
         strokeWidth="2"
       />
     </svg>
@@ -97,7 +97,7 @@ export function ColumnChart({ data, valueLabel = 'Value', height = 200 }) {
   return (
     <div>
       <div className="flex items-center justify-end mb-1">
-        <div className="inline-flex rounded-lg border border-line p-0.5 bg-page" role="group" aria-label="Chart display">
+        <div className="inline-flex rounded-xl border border-line p-1 bg-subtle" role="group" aria-label="Chart display">
           {[
             { key: false, label: 'Chart', Icon: IconChart },
             { key: true, label: 'Table', Icon: IconTable },
@@ -141,6 +141,13 @@ export function ColumnChart({ data, valueLabel = 'Value', height = 200 }) {
         <div ref={wrapRef} className="relative" style={{ height }}>
           {width > 0 && (
             <svg width={width} height={height} role="img" aria-label={`${valueLabel} per day`}>
+              {/* Columns wear the shell gradient so the chart matches the sidebar. */}
+              <defs>
+                <linearGradient id="colGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--chart-from)" />
+                  <stop offset="100%" stopColor="var(--chart-to)" />
+                </linearGradient>
+              </defs>
               {ticks.map((t) => (
                 <g key={t}>
                   <line
@@ -171,9 +178,9 @@ export function ColumnChart({ data, valueLabel = 'Value', height = 200 }) {
                 return (
                   <g key={d.label}>
                     <path
-                      d={columnPath(xOf(i), yOf(d.value), colW, h, 4)}
-                      fill="var(--accent)"
-                      opacity={hover === null || active ? 1 : 0.45}
+                      d={columnPath(xOf(i), yOf(d.value), colW, h, 6)}
+                      fill="url(#colGrad)"
+                      opacity={hover === null || active ? 1 : 0.4}
                       style={{ transition: 'opacity .12s' }}
                     />
                     {i === peakIndex && (
@@ -181,9 +188,9 @@ export function ColumnChart({ data, valueLabel = 'Value', height = 200 }) {
                         x={xOf(i) + colW / 2}
                         y={yOf(d.value) - 5}
                         textAnchor="middle"
-                        fontSize="10"
-                        fontWeight="600"
-                        fill="var(--muted)"
+                        fontSize="11"
+                        fontWeight="700"
+                        fill="var(--ink)"
                         style={{ fontVariantNumeric: 'tabular-nums' }}
                       >
                         {d.value}

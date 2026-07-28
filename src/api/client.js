@@ -18,6 +18,7 @@ export const api = {
   addAgent:         (a)    => USE_MOCK ? mock.addAgent(a)         : http('POST',   '/api/agents', a),
   saveAgent:        (a)    => USE_MOCK ? mock.saveAgent(a)        : http('PUT',    `/api/agents/${a.id}`, a),
   deleteAgent:      (id)   => USE_MOCK ? mock.deleteAgent(id)     : http('DELETE', `/api/agents/${id}`),
+  saveAgentCompany: (id, c)=> USE_MOCK ? mock.saveAgentCompany(id, c) : http('PATCH', `/api/agents/${id}/company`, c),
   connectProvider:  (id, p, e) => USE_MOCK ? mock.connectProvider(id, p, e) : http('POST', `/api/agents/${id}/connect`, { provider: p, email: e }),
   saveImap:         (id, c)=> USE_MOCK ? mock.saveImap(id, c)     : http('POST',   `/api/agents/${id}/imap`, c),
   disconnect:       (id)   => USE_MOCK ? mock.disconnectProvider(id) : http('POST', `/api/agents/${id}/disconnect`),

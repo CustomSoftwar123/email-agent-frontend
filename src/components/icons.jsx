@@ -118,6 +118,9 @@ export const IconArrowLeftCircle = (p) => (
   <Icon {...p}><circle cx="12" cy="12" r="9" /><path d="M13 8.5 9.5 12l3.5 3.5" /><path d="M9.5 12H15" /></Icon>
 )
 export const IconChevronDown = (p) => <Icon {...p}><path d="m6 9 6 6 6-6" /></Icon>
+export const IconPalette = (p) => (
+  <Icon {...p}><path d="M12 3a9 9 0 0 0 0 18c1 0 1.7-.8 1.7-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.1 0-.9.8-1.7 1.7-1.7H16a5 5 0 0 0 5-5c0-4-4-7.3-9-7.3z" /><circle cx="7.5" cy="12" r="1" /><circle cx="9.5" cy="8" r="1" /><circle cx="14.5" cy="8" r="1" /></Icon>
+)
 export const IconInfo = (p) => (
   <Icon {...p}><circle cx="12" cy="12" r="9" /><path d="M12 11v5.5M12 7.8v.1" /></Icon>
 )

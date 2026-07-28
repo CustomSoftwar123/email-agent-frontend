@@ -12,64 +12,64 @@ import {
 
 /* -------------------------------------------------------------- stat tiles */
 
-// KPI tile: a 4px accent bar across the top, a tinted icon chip, then the
-// value and its label.
+// KPI tile — a filled gradient panel with white text. `tone` picks which of the
+// six gradients it wears; the palette lives in CSS so presets can restyle it.
 const KPI_TONES = {
-  indigo: '#6366f1',
-  sky: '#0ea5e9',
-  emerald: '#16a34a',
-  violet: '#8b5cf6',
-  amber: '#f59e0b',
-  rose: '#ef4444',
+  indigo: 'var(--kpi-indigo)',
+  sky: 'var(--kpi-sky)',
+  emerald: 'var(--kpi-emerald)',
+  violet: 'var(--kpi-violet)',
+  amber: 'var(--kpi-amber)',
+  rose: 'var(--kpi-rose)',
 }
 
 export function StatCard({ label, value, period, hint, delta, trend, tone = 'indigo', icon, progress }) {
-  const kpi = KPI_TONES[tone] ?? KPI_TONES.indigo
   const up = delta != null && delta >= 0
   const DeltaIcon = up ? IconArrowUp : IconArrowDown
 
   return (
-    <div className="card relative overflow-hidden p-5 transition-shadow hover:shadow-pop">
-      <span className="absolute inset-x-0 top-0 h-1" style={{ background: kpi }} />
+    <div
+      className="relative overflow-hidden rounded-2xl p-5 text-white transition-transform duration-200 hover:-translate-y-1"
+      style={{ backgroundImage: KPI_TONES[tone] ?? KPI_TONES.indigo, boxShadow: 'var(--shadow-card)' }}
+    >
+      {/* soft highlight so the fill doesn't read flat */}
+      <span
+        className="pointer-events-none absolute -right-8 -top-10 w-32 h-32 rounded-full"
+        style={{ background: 'rgba(255,255,255,0.14)' }}
+      />
 
-      <div className="flex items-start justify-between gap-3">
-        <span
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: `color-mix(in srgb, ${kpi} 14%, transparent)`, color: kpi }}
-        >
+      <div className="relative flex items-start justify-between gap-3">
+        <span className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
           {icon}
         </span>
-        {trend && <Sparkline data={trend} />}
+        {trend && <Sparkline data={trend} color="rgba(255,255,255,0.95)" ring="transparent" />}
       </div>
 
       {/* Proportional figures — tabular-nums is for columns, not display numbers. */}
-      <div className="mt-3 text-[28px] leading-none font-extrabold tracking-tight text-ink">{value}</div>
-      <div className="mt-1.5 text-[13px] font-semibold text-muted">
+      <div className="relative mt-4 text-[32px] leading-none font-extrabold tracking-tight">{value}</div>
+      <div className="relative mt-2 text-sm font-semibold text-white/90">
         {label}
-        {period && <span className="ml-1 font-normal text-dim">· {period}</span>}
+        {period && <span className="ml-1 font-normal text-white/70">· {period}</span>}
       </div>
 
       {progress && progress.max > 0 && (
-        // Meter: fill carries severity, track is a lighter step of the same ramp.
-        <div className="mt-3 h-1.5 rounded-full bg-accent-soft overflow-hidden">
+        <div className="relative mt-4 h-1.5 rounded-full bg-white/25 overflow-hidden">
           <div
-            className={`h-full rounded-full transition-[width] duration-500 ${
-              progress.value / progress.max >= 0.85 ? 'bg-warn' : 'bg-accent'
-            }`}
+            className="h-full rounded-full bg-white transition-[width] duration-500"
             style={{ width: `${Math.min(100, (progress.value / progress.max) * 100)}%` }}
           />
         </div>
       )}
 
       {(delta != null || hint) && (
-        <div className="mt-2.5 flex items-center gap-2 text-xs">
+        <div className="relative mt-3 flex items-center gap-2 text-xs text-white/85">
           {delta != null && (
-            <span className={`inline-flex items-center gap-0.5 font-semibold ${up ? 'text-good-ink' : 'text-danger-ink'}`}>
+            <span className="inline-flex items-center gap-0.5 font-bold rounded-full bg-white/20 px-2 py-0.5">
               <DeltaIcon size={12} />
               {Math.abs(delta)}%
             </span>
           )}
-          {hint && <span className="text-faint truncate">{hint}</span>}
+          {hint && <span className="truncate">{hint}</span>}
         </div>
       )}
     </div>
@@ -188,7 +188,7 @@ export function SkeletonCards({ count = 4 }) {
 export function SkeletonTable({ rows = 4, cols = 4 }) {
   return (
     <div className="card overflow-hidden">
-      <div className="h-10 bg-page border-b border-line" />
+      <div className="h-9 bg-subtle border-b border-line" />
       {Array.from({ length: rows }).map((_, r) => (
         <div key={r} className="flex items-center gap-4 px-4 py-3.5 border-b border-line last:border-0">
           {Array.from({ length: cols }).map((_, c) => (

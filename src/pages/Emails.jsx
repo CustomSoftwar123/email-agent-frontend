@@ -210,7 +210,7 @@ export default function Emails() {
             />
           ) : (
             <div className="card overflow-hidden">
-              <div className="h-2.5" style={{ background: 'var(--accent)' }} />
+              <div className="h-1.5" style={{ background: 'var(--action)' }} />
               <div className="table-wrap">
                 <table className="w-full min-w-[860px]">
                   <thead>

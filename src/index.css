@@ -3,116 +3,265 @@
 @tailwind utilities;
 
 /* ---------------------------------------------------------------------------
-   Design tokens for the standalone email agent, aligned with the wider
-   product family.
-
-     --brand #3b5bdb (the live theme_primary_color)   --bg-app #f5f6fb
-     --bg-surface #fff   --bg-subtle #f8fafc          --border-soft #eef0f5
-     --text-strong #0f172a  --text #1e293b            --text-muted #64748b
-     --r-sm 10px  --r 14px  --r-lg 18px               Inter
-
-   Dark mode steps were selected for the dark surface rather than flipped
-   from the light ones.
+   Vivid — the default theme. Saturated brand colour used generously: gradient
+   sidebar, gradient primary actions, filled stat cards, brand-filled table
+   headers, larger display type. Built to catch the eye rather than recede.
    --------------------------------------------------------------------------- */
 :root {
   color-scheme: light;
 
-  --page: #f5f6fb;
+  --page: #f4f5fb;
   --surface: #ffffff;
   --raised: #ffffff;
-  --subtle: #f8fafc;
-  --line: #eef0f5;
-  --line-strong: #e5e7eb;
+  --subtle: #f7f8fd;
+  --line: #e9eaf6;
+  --line-strong: #d6d8ee;
 
-  --ink: #0f172a;
-  --muted: #1e293b;
-  --faint: #64748b;
-  --dim: #94a3b8;
+  --ink: #14142b;
+  --muted: #3f3f5f;
+  --faint: #6e6e91;
+  --dim: #9a9ab8;
 
-  --accent: #3b5bdb;
-  --accent-hover: #2e47ab;
-  --accent-soft: #eaeefc;
-  --accent-ink: #2e47ab;
-  --brand-gradient: linear-gradient(135deg, #5e79e2 0%, #3b5bdb 55%, #2e47ab 100%);
-  --sidebar-gradient: linear-gradient(180deg, #3b5bdb 0%, #354dbb 100%);
-  --ai-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --accent-soft: #eef0ff;
+  --accent-ink: #4338ca;
+  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
 
-  --good: #16a34a;
-  --good-soft: #dcfce7;
-  --good-ink: #15803d;
+  --sidebar: #0f1419;
+  --sidebar-gradient: none;
+  --sidebar-ink: rgba(255, 255, 255, 0.72);
+  --sidebar-ink-active: #ffffff;
+  --sidebar-active: rgba(255, 255, 255, 0.09);
+  --sidebar-line: rgba(255, 255, 255, 0.08);
+  --sidebar-label: rgba(255, 255, 255, 0.4);
+
+  /* Primary actions and chart marks take the sidebar's colour family, so the
+     shell, the buttons and the plot all read as one dark accent. */
+  --action: #0f1419;
+  --action-ink: #ffffff;
+  --action-hover: #232c36;
+  --action-shadow: 0 6px 16px -6px rgba(15, 20, 25, 0.55);
+  --chart-from: #3a4654;
+  --chart-to: #0f1419;
+
+  /* Filled KPI cards — each a gradient, white text on top. */
+  --kpi-indigo: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  --kpi-sky: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+  --kpi-emerald: linear-gradient(135deg, #34d399 0%, #059669 100%);
+  --kpi-violet: linear-gradient(135deg, #c084fc 0%, #7c3aed 100%);
+  --kpi-amber: linear-gradient(135deg, #fbbf24 0%, #f97316 100%);
+  --kpi-rose: linear-gradient(135deg, #fb7185 0%, #e11d48 100%);
+
+  --good: #10b981;
+  --good-soft: #e7f9f1;
+  --good-ink: #047857;
 
   --warn: #f59e0b;
-  --warn-soft: #fef3c7;
+  --warn-soft: #fef5e2;
   --warn-ink: #b45309;
 
   --danger: #ef4444;
-  --danger-soft: #fee2e2;
-  --danger-ink: #b91c1c;
+  --danger-soft: #fdeced;
+  --danger-ink: #be123c;
 
   --violet: #8b5cf6;
-  --violet-soft: #ede9fe;
+  --violet-soft: #f3eeff;
   --violet-ink: #6d28d9;
 
-  --info: #0ea5e9;
-  --info-soft: #e0f2fe;
-  --info-ink: #0369a1;
+  --info: #3b82f6;
+  --info-soft: #eaf2ff;
+  --info-ink: #1d4ed8;
 
-  --grid: #eef0f5;
-  --focus: rgba(59, 91, 219, 0.18);
-  --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --shadow-card: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.04);
-  --shadow-pop: 0 12px 28px rgba(16, 24, 40, 0.1), 0 4px 8px rgba(16, 24, 40, 0.05);
-  --shadow-brand: 0 8px 20px -6px rgba(59, 91, 219, 0.55);
+  --grid: #ecedf8;
+  --focus: rgba(99, 102, 241, 0.22);
+  --shadow-xs: 0 1px 2px rgba(20, 20, 43, 0.05);
+  --shadow-card: 0 4px 16px rgba(79, 70, 229, 0.07), 0 1px 3px rgba(20, 20, 43, 0.05);
+  --shadow-pop: 0 16px 40px rgba(79, 70, 229, 0.18), 0 4px 12px rgba(20, 20, 43, 0.08);
+  --shadow-accent: 0 8px 20px -6px rgba(99, 102, 241, 0.6);
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --page: #0a0f1c;
-  --surface: #111827;
-  --raised: #1a2233;
-  --subtle: #172033;
-  --line: #1f2a3d;
-  --line-strong: #334155;
+  --page: #0d0d1a;
+  --surface: #16162b;
+  --raised: #1c1c36;
+  --subtle: #1a1a32;
+  --line: #272747;
+  --line-strong: #3a3a63;
 
-  --ink: #f8fafc;
-  --muted: #e2e8f0;
-  --faint: #94a3b8;
-  --dim: #64748b;
+  --ink: #f4f4ff;
+  --muted: #d3d3ea;
+  --faint: #9d9dc2;
+  --dim: #6e6e94;
 
-  --accent: #6d8bf2;
-  --accent-hover: #8aa3f6;
-  --accent-soft: rgba(109, 139, 242, 0.16);
-  --accent-ink: #b6c6fa;
-  --brand-gradient: linear-gradient(135deg, #6d8bf2 0%, #3b5bdb 55%, #2e47ab 100%);
-  --sidebar-gradient: linear-gradient(180deg, #16203a 0%, #0e1526 100%);
+  --accent: #818cf8;
+  --accent-hover: #a5b4fc;
+  --accent-soft: rgba(129, 140, 248, 0.18);
+  --accent-ink: #c7d2fe;
+  --accent-gradient: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
 
-  --good: #22c55e;
-  --good-soft: rgba(34, 197, 94, 0.16);
-  --good-ink: #4ade80;
+  --sidebar: #08090c;
+  --sidebar-gradient: none;
 
-  --warn: #f59e0b;
-  --warn-soft: rgba(245, 158, 11, 0.16);
-  --warn-ink: #fbbf24;
+  --action: #e8e9f5;
+  --action-ink: #0d0d1a;
+  --action-hover: #ffffff;
+  --action-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.6);
+  --chart-from: #a5b4fc;
+  --chart-to: #4f46e5;
 
-  --danger: #ef4444;
-  --danger-soft: rgba(239, 68, 68, 0.18);
-  --danger-ink: #f87171;
+  --good: #34d399;
+  --good-soft: rgba(52, 211, 153, 0.16);
+  --good-ink: #6ee7b7;
+
+  --warn: #fbbf24;
+  --warn-soft: rgba(251, 191, 36, 0.16);
+  --warn-ink: #fcd34d;
+
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.18);
+  --danger-ink: #fca5a5;
 
   --violet: #a78bfa;
   --violet-soft: rgba(167, 139, 250, 0.18);
   --violet-ink: #c4b5fd;
 
-  --info: #38bdf8;
-  --info-soft: rgba(56, 189, 248, 0.16);
-  --info-ink: #7dd3fc;
+  --info: #60a5fa;
+  --info-soft: rgba(96, 165, 250, 0.16);
+  --info-ink: #93c5fd;
 
-  --grid: #1f2a3d;
-  --focus: rgba(109, 139, 242, 0.4);
+  --grid: #272747;
+  --focus: rgba(129, 140, 248, 0.35);
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.5);
-  --shadow-pop: 0 12px 28px rgba(0, 0, 0, 0.6);
-  --shadow-brand: 0 8px 20px -6px rgba(59, 91, 219, 0.5);
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-pop: 0 16px 40px rgba(0, 0, 0, 0.6);
+  --shadow-accent: 0 8px 20px -6px rgba(129, 140, 248, 0.5);
+}
+
+/* ---------------------------------------------------------------------------
+   Alternate presets. Each redefines only the palette; components read the
+   variables, so switching is instant.
+   --------------------------------------------------------------------------- */
+
+/* --- Slate: restrained, near-black shell ---------------------------------- */
+:root[data-preset='slate']:not([data-theme='dark']) {
+  --page: #f7f8fa;
+  --subtle: #f7f8fa;
+  --line: #e7eaee;
+  --line-strong: #d3d8df;
+  --ink: #101418;
+  --muted: #3f454e;
+  --faint: #6b7280;
+  --dim: #9aa1ab;
+  --accent: #3b5bdb;
+  --accent-hover: #2f4bc4;
+  --accent-soft: #eef1fd;
+  --accent-ink: #2f4bc4;
+  --accent-gradient: none;
+  --sidebar: #0f1419;
+  --sidebar-gradient: none;
+  --sidebar-active: rgba(255, 255, 255, 0.08);
+  --action: #0f1419;
+  --action-ink: #ffffff;
+  --action-hover: #232c36;
+  --chart-from: #3a4654;
+  --chart-to: #0f1419;
+  --good: #16794c;
+  --good-soft: #e9f6f0;
+  --good-ink: #12603c;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --danger-ink: #912018;
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-accent: none;
+  --focus: rgba(59, 91, 219, 0.16);
+}
+:root[data-preset='slate'][data-theme='dark'] {
+  --page: #0b0e13;
+  --surface: #12161d;
+  --raised: #171c24;
+  --subtle: #161b22;
+  --line: #232a34;
+  --accent: #7590ea;
+  --accent-gradient: none;
+  --sidebar: #080a0e;
+  --sidebar-gradient: none;
+}
+
+/* --- Porcelain: light shell, monochrome ink ------------------------------- */
+:root[data-preset='porcelain']:not([data-theme='dark']) {
+  --page: #ffffff;
+  --subtle: #fafafa;
+  --line: #ececec;
+  --line-strong: #dcdcdc;
+  --ink: #111111;
+  --muted: #3d3d3d;
+  --faint: #737373;
+  --dim: #a3a3a3;
+  --accent: #111111;
+  --accent-hover: #000000;
+  --accent-soft: #f2f2f2;
+  --accent-ink: #111111;
+  --accent-gradient: none;
+  --sidebar: #fafafa;
+  --sidebar-gradient: none;
+  --action: #111111;
+  --action-ink: #ffffff;
+  --action-hover: #2b2b2b;
+  --chart-from: #4a4a4a;
+  --chart-to: #111111;
+  --sidebar-ink: #525252;
+  --sidebar-active: #ececec;
+  --sidebar-label: #a3a3a3;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-accent: none;
+  --focus: rgba(17, 17, 17, 0.12);
+}
+:root[data-preset='porcelain'][data-theme='dark'] {
+  --page: #0c0c0c;
+  --surface: #141414;
+  --raised: #1a1a1a;
+  --subtle: #171717;
+  --line: #262626;
+  --accent: #fafafa;
+  --accent-gradient: none;
+  --sidebar: #0a0a0a;
+  --sidebar-gradient: none;
+}
+
+/* --- Teal: cool surfaces, deep teal accent -------------------------------- */
+:root[data-preset='teal']:not([data-theme='dark']) {
+  --page: #f2f8f7;
+  --subtle: #f2f9f8;
+  --line: #dfeceb;
+  --line-strong: #c7dedb;
+  --accent: #0d9488;
+  --accent-hover: #0f766e;
+  --accent-soft: #e2f5f3;
+  --accent-ink: #0f766e;
+  --accent-gradient: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+  --sidebar: #0c2b28;
+  --sidebar-gradient: linear-gradient(180deg, #0f3d38 0%, #072522 100%);
+  --action: #0d9488;
+  --action-ink: #ffffff;
+  --action-hover: #0f766e;
+  --chart-from: #2dd4bf;
+  --chart-to: #0d9488;
+  --focus: rgba(13, 148, 136, 0.2);
+  --shadow-accent: 0 8px 20px -6px rgba(13, 148, 136, 0.5);
+}
+:root[data-preset='teal'][data-theme='dark'] {
+  --page: #061412;
+  --surface: #0d1f1d;
+  --raised: #122624;
+  --subtle: #10221f;
+  --line: #1d3733;
+  --accent: #2dd4bf;
+  --accent-gradient: linear-gradient(135deg, #2dd4bf 0%, #14b8a6 100%);
+  --sidebar: #061715;
+  --sidebar-gradient: linear-gradient(180deg, #0b2320 0%, #04100e 100%);
 }
 
 @layer base {
@@ -145,29 +294,31 @@
 }
 
 @layer components {
-  /* --- surfaces ---------------------------------------------------------- */
   .card {
-    @apply bg-surface rounded-2xl border border-line shadow-card;
+    @apply bg-surface rounded-2xl border border-line;
+    box-shadow: var(--shadow-card);
   }
   .card-head {
-    @apply flex items-start justify-between gap-4 px-[1.35rem] py-[1.1rem] border-b border-line;
+    @apply flex items-start justify-between gap-4 px-6 py-5 border-b border-line;
   }
 
-  /* --- buttons ----------------------------------------------------------- */
+  /* --- buttons: gradient primary with a coloured lift --------------------- */
   .btn {
-    @apply inline-flex items-center justify-center gap-1.5 px-3.5 h-9 rounded-lg text-sm font-semibold
+    @apply inline-flex items-center justify-center gap-2 px-4 h-10 rounded-xl text-sm font-semibold
            whitespace-nowrap transition-all disabled:opacity-45 disabled:pointer-events-none;
   }
   .btn-primary {
-    @apply btn text-white;
-    background-image: var(--brand-gradient);
-    box-shadow: var(--shadow-brand);
+    @apply btn;
+    background: var(--action);
+    color: var(--action-ink);
+    box-shadow: var(--action-shadow);
   }
   .btn-primary:hover {
-    filter: brightness(1.05);
+    background: var(--action-hover);
+    transform: translateY(-1px);
   }
   .btn-secondary {
-    @apply btn bg-surface text-ink border border-line-strong font-medium hover:bg-subtle;
+    @apply btn bg-surface text-ink border border-line-strong hover:bg-subtle;
   }
   .btn-ghost {
     @apply btn text-faint font-medium hover:text-ink hover:bg-subtle;
@@ -176,64 +327,62 @@
     @apply btn text-danger-ink font-medium hover:bg-danger-soft;
   }
   .btn-icon {
-    @apply inline-flex items-center justify-center w-9 h-9 rounded-lg text-faint
-           hover:text-ink hover:bg-subtle transition-colors shrink-0;
+    @apply inline-flex items-center justify-center w-10 h-10 rounded-xl text-faint
+           hover:text-accent hover:bg-accent-soft transition-colors shrink-0;
   }
 
-  /* --- forms ------------------------------------------------------------- */
+  /* --- forms --------------------------------------------------------------- */
   .input {
-    @apply w-full rounded-lg border border-line-strong bg-surface text-sm text-muted
+    @apply w-full rounded-xl border border-line-strong bg-surface text-sm text-ink
            placeholder:text-dim transition-colors;
-    padding: 0.6rem 0.85rem;
+    padding: 0.65rem 0.9rem;
   }
   .input:focus {
     @apply outline-none border-accent;
-    box-shadow: 0 0 0 3px var(--focus);
+    box-shadow: 0 0 0 4px var(--focus);
   }
   select.input {
     @apply pr-8 appearance-none bg-no-repeat;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2394a3b8' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
-    background-position: right 0.7rem center;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%239a9ab8' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+    background-position: right 0.75rem center;
   }
   .label {
-    @apply block text-[13px] font-semibold text-ink mb-1.5;
+    @apply block text-sm font-semibold text-ink mb-2;
   }
   .hint {
     @apply text-xs text-faint;
   }
 
-  /* --- badges (soft pills) ----------------------------------------------- */
   .badge {
     @apply inline-flex items-center gap-1.5 rounded-full text-xs font-semibold whitespace-nowrap;
-    padding: 0.4em 0.85em;
-    letter-spacing: 0.01em;
+    padding: 0.3rem 0.65rem;
   }
 
-  /* --- tables (brand-filled header row) ---------------------------------- */
+  /* --- tables: brand-filled header ---------------------------------------- */
   .table-wrap {
     @apply overflow-x-auto p-2;
   }
-  /* Preflight collapses tables, which kills the rounded ends on the header
-     row — separate borders bring them back without changing the layout. */
   .table-wrap table {
     border-collapse: separate;
     border-spacing: 0;
   }
   .th {
-    @apply text-left text-white uppercase;
-    background: var(--accent);
-    font-size: 0.74rem;
+    @apply text-left;
+    background: var(--action);
+    color: var(--action-ink);
+    font-size: 0.72rem;
     font-weight: 700;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     padding: 0.9rem 1rem;
   }
   .th:first-child {
-    border-top-left-radius: 10px;
-    border-bottom-left-radius: 10px;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
   }
   .th:last-child {
-    border-top-right-radius: 10px;
-    border-bottom-right-radius: 10px;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
   }
   .td {
     @apply text-sm text-muted border-b border-line align-middle;
@@ -246,29 +395,30 @@
     @apply border-b-0;
   }
 
-  /* --- page header ------------------------------------------------------- */
+  /* --- page header: larger display type ----------------------------------- */
   .ph-eyebrow {
-    @apply inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-accent mb-1.5;
+    @apply inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-accent mb-2;
   }
   .ph-title {
     @apply text-ink;
-    font-size: 1.55rem;
+    font-size: 1.75rem;
     font-weight: 800;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.025em;
     line-height: 1.15;
   }
   .ph-sub {
-    @apply text-faint mt-1;
-    font-size: 0.92rem;
+    @apply text-faint mt-1.5;
+    font-size: 0.9375rem;
   }
 
-  /* --- misc -------------------------------------------------------------- */
   .ai-chip {
-    @apply inline-flex items-center gap-1.5 rounded-full px-3 h-8 text-xs font-semibold text-white;
-    background-image: var(--ai-gradient);
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 h-9 text-xs font-bold;
+    background: var(--action);
+    color: var(--action-ink);
+    box-shadow: var(--action-shadow);
   }
   .skeleton {
-    @apply relative overflow-hidden rounded-md bg-line;
+    @apply relative overflow-hidden rounded-lg bg-line;
   }
   .skeleton::after {
     content: '';
@@ -277,6 +427,6 @@
     opacity: 0.6;
   }
   .page-body {
-    @apply px-4 sm:px-6 lg:px-8 pb-8 animate-fade-up;
+    @apply px-4 sm:px-6 lg:px-8 pb-10 animate-fade-up;
   }
 }

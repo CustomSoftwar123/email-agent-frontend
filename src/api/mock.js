@@ -77,6 +77,19 @@ const db = {
       id: 2, name: 'Usman Ali', dob: '1996-03-14', gender: 'Male', personality: 'Professional',
       roles: ['Email Agent'], leads_action: true,
       description: 'You are a professional sales rep for {{company_name}}. Keep replies under 120 words and always sign off with the company name.',
+      company: {
+        name: 'YourCo Ltd',
+        email: 'hello@yourco.com',
+        address: '12 High Street, Dublin, Ireland',
+        country: 'Ireland',
+        region: 'Europe/Dublin',
+        description: 'We build custom software for SMBs.',
+        pricing: 'Projects start at $2,000. Hourly rate $60.',
+        business_type: 'Service',
+        service_knowledge: 'Custom dashboards, internal tools, API integrations and email automation. Typical delivery 4-6 weeks.',
+        product_knowledge: '',
+        global_prompt: 'Always be concise, never invent pricing, and ask for a phone number once the prospect shows interest.',
+      },
       provider: 'Gmail',
       connection: { status: 'connected', email: 'sales@yourco.com', detail: 'OAuth token · refreshes in 42m' },
       is_primary: true, watcher: 'running', bookmark: 'UID 18422', last_checked: '18s ago', sent_30d: 184,
@@ -85,6 +98,19 @@ const db = {
       id: 4, name: 'Abc', dob: '2001-08-02', gender: 'Female', personality: 'Friendly',
       roles: ['Email Agent'], leads_action: false,
       description: 'You are a friendly assistant for {{company_name}}. Answer questions about {{service_knowledge}} and never pressure the prospect.',
+      company: {
+        name: 'Umbrella Labs',
+        email: 'hello@umbrella.dev',
+        address: '4 Dame Lane, Dublin, Ireland',
+        country: 'Ireland',
+        region: 'Europe/Dublin',
+        description: 'We run first-line support inboxes for dev teams.',
+        pricing: 'From $400/month per inbox.',
+        business_type: 'Service',
+        service_knowledge: 'Triage, first-line replies, escalation rules and weekly reporting on inbox volume.',
+        product_knowledge: '',
+        global_prompt: 'Be warm and helpful. Never promise a deadline. Offer a 14-day trial when asked about cost.',
+      },
       provider: 'Outlook',
       connection: { status: 'connected', email: 'hello@yourco.com', detail: 'OAuth token · refreshes in 2h 10m' },
       is_primary: false, watcher: 'running', bookmark: 'UID 9031', last_checked: '24s ago', sent_30d: 76,
@@ -93,6 +119,20 @@ const db = {
       id: 5, name: 'zain', dob: '2003-12-07', gender: 'Male', personality: 'Confident',
       roles: ['Email Agent'], leads_action: true,
       description: 'You are a confident sales rep for {{company_name}} at {{company_address}}. Quote pricing only when asked.',
+      company: {
+        name: 'Arna Software',
+        email: 'ocmsoftware2026@gmail.com',
+        address: 'Model Town F Block, Lahore',
+        country: 'Pakistan',
+        region: 'Asia/Karachi',
+        description: 'Arna Software builds custom web, mobile and enterprise systems.',
+        pricing: 'It can vary on services, so there is no fixed pricing.',
+        business_type: 'Service',
+        service_knowledge:
+          '1. Custom Software Development\n2. Web Application Development\n3. Enterprise Systems, ERP and CRM',
+        product_knowledge: '',
+        global_prompt: 'Introduce the company briefly, then ask what the prospect needs built.',
+      },
       provider: 'IMAP',
       connection: { status: 'error', email: 'support@yourco.co', detail: 'imap.yourco.co:993 · auth failed' },
       is_primary: false, watcher: 'error', bookmark: 'UID 2210', last_checked: '6h ago', sent_30d: 0,
@@ -220,6 +260,11 @@ export const mock = {
       roles: ['Email Agent'],
       leads_action: true,
       description: '',
+      company: {
+        name: '', email: '', address: '', country: '', region: '',
+        description: '', pricing: '', business_type: 'Service',
+        service_knowledge: '', product_knowledge: '', global_prompt: '',
+      },
       provider: 'Gmail',
       connection: { status: 'disconnected', email: '', detail: 'Not connected yet' },
       is_primary: false,
@@ -231,6 +276,14 @@ export const mock = {
     }
     db.agents.push(row)
     return clone(row)
+  },
+  /** Update only this agent's company profile. */
+  async saveAgentCompany(id, company) {
+    await delay(450)
+    const agent = db.agents.find((a) => a.id === Number(id))
+    if (!agent) return null
+    agent.company = { ...agent.company, ...clone(company) }
+    return clone(agent)
   },
   async deleteAgent(id) {
     await delay()

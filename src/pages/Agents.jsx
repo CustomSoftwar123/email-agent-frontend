@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '../components/Layout.jsx'
 import Modal from '../components/Modal.jsx'
-import { Empty, Skeleton, StatusBadge, useToast } from '../components/ui.jsx'
+import { Card, Empty, Skeleton, StatusBadge, useToast } from '../components/ui.jsx'
 import {
   IconAlert,
   IconArrowLeftCircle,
@@ -19,7 +19,9 @@ import { api } from '../api/client.js'
 // Field vocabulary for the Edit Agent form.
 const PERSONALITIES = ['Friendly', 'Professional', 'Confident', 'Helpful', 'Calm', 'Energetic']
 const GENDERS = ['Male', 'Female']
-const ROLES = ['Email Agent', 'Calling Agent', 'Marketing Agent']
+// This deployment is the email agent only — calling and marketing roles belong
+// to the wider suite, not here.
+const ROLES = ['Email Agent']
 const PROVIDERS = [
   // `connect` is the brand colour of that provider's Connect button.
   { value: 'Gmail', label: 'Google (Gmail)', connect: 'var(--danger)' },
@@ -27,6 +29,23 @@ const PROVIDERS = [
   { value: 'IMAP', label: 'IMAP', connect: '#334155' },
 ]
 const VARIABLES = ['{{company_name}}', '{{company_address}}', '{{company_description}}', '{{service_knowledge}}']
+
+const COUNTRIES = [
+  'Ireland', 'United Kingdom', 'United States', 'Canada', 'Pakistan', 'India',
+  'Poland', 'Germany', 'France', 'Spain', 'Netherlands', 'Australia', 'United Arab Emirates',
+]
+// Company Region is stored as an IANA timezone.
+const REGIONS = [
+  'Europe/Dublin', 'Europe/London', 'Europe/Vienna', 'Europe/Berlin', 'Europe/Warsaw',
+  'Europe/Madrid', 'Asia/Karachi', 'Asia/Kolkata', 'Asia/Dubai',
+  'America/New_York', 'America/Chicago', 'America/Los_Angeles', 'Australia/Sydney',
+]
+
+const BLANK_COMPANY = {
+  name: '', email: '', address: '', country: '', region: '',
+  description: '', pricing: '', business_type: 'Service',
+  service_knowledge: '', product_knowledge: '', global_prompt: '',
+}
 
 const BLANK = {
   name: '',
@@ -36,6 +55,7 @@ const BLANK = {
   roles: ['Email Agent'],
   leads_action: true,
   description: '',
+  company: { ...BLANK_COMPANY },
   provider: 'Gmail',
   connection: { status: 'disconnected', email: '', detail: 'Not connected yet' },
 }
@@ -55,6 +75,7 @@ export default function Agents() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmSwitch, setConfirmSwitch] = useState(false)
   const [connecting, setConnecting] = useState(false)
+  const [savingCompany, setSavingCompany] = useState(false)
   const toast = useToast()
 
   useEffect(() => {
@@ -92,6 +113,8 @@ export default function Agents() {
   }, [id, isNew, navigate])
 
   const set = (k, v) => setDraft((d) => ({ ...d, [k]: v }))
+  // Company info lives on the agent, so two agents can represent two companies.
+  const setCompany = (k, v) => setDraft((d) => ({ ...d, company: { ...d.company, [k]: v } }))
 
   const toggleRole = (role) =>
     setDraft((d) => ({
@@ -100,14 +123,11 @@ export default function Agents() {
     }))
 
   // Email settings only apply to an agent that actually has an email role.
-  // Dropping the role clears the provider and forces Leads Action off.
   const hasEmailRole = !!draft?.roles?.some((r) => String(r).toLowerCase().includes('email'))
 
   useEffect(() => {
-    if (!draft || hasEmailRole) return
-    if (draft.provider || draft.leads_action) {
-      setDraft((d) => ({ ...d, provider: '', leads_action: false }))
-    }
+    if (!draft || hasEmailRole || !draft.provider) return
+    setDraft((d) => ({ ...d, provider: '' }))
   }, [hasEmailRole, draft])
 
   const selectedProvider = (draft?.provider || '').toLowerCase()
@@ -147,6 +167,16 @@ export default function Agents() {
     setSavedProvider(saved.connection?.status !== 'disconnected' ? saved.provider : '')
     setSaving(false)
     toast(providerChanged ? `Switched to ${label(selectedProvider)} — connect the mailbox to start it` : 'Agent updated')
+  }
+
+  /** Save just the company profile, without touching the rest of the agent. */
+  async function updateCompany() {
+    if (isNew) return
+    setSavingCompany(true)
+    const updated = await api.saveAgentCompany(draft.id, draft.company)
+    setDraft((d) => ({ ...d, company: updated.company }))
+    setSavingCompany(false)
+    toast('Company info updated')
   }
 
   async function remove() {
@@ -220,6 +250,8 @@ export default function Agents() {
 
   const connected = draft.connection?.status === 'connected'
   const failed = draft.connection?.status === 'error'
+  const company = { ...BLANK_COMPANY, ...(draft.company ?? {}) }
+  const isProduct = company.business_type === 'Product'
 
   return (
     <>
@@ -230,8 +262,10 @@ export default function Agents() {
         subtitle="Update this AI agent's profile, roles, prompt, and email connection."
       />
 
-      <div className="page-body">
-        <form onSubmit={submit} className="card p-6 sm:p-7">
+      <div className="page-body max-w-6xl">
+        <form onSubmit={submit} className="space-y-5">
+          {/* ---------------------------------------------- agent profile --- */}
+          <Card title="Agent profile" subtitle="Who this agent is and how it writes" bodyClass="p-6">
           {/* Row 1 — identity */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
             <Field label="Agent Name" id="ag-name">
@@ -343,30 +377,97 @@ export default function Agents() {
             </Field>
           </div>
 
-          {/* Leads Action — only meaningful for an email agent */}
-          {hasEmailRole && (
-            <div className="mt-6">
-              <p className="label">Leads Action</p>
-              <div className="flex items-center gap-6">
-                {[['Yes', true], ['No', false]].map(([lbl, value]) => (
-                  <label key={lbl} className="inline-flex items-center gap-2 cursor-pointer text-sm text-muted">
-                    <input
-                      type="radio"
-                      name="leads_action"
-                      className="w-4 h-4 accent-[var(--accent)]"
-                      checked={draft.leads_action === value}
-                      onChange={() => set('leads_action', value)}
-                    />
-                    {lbl}
-                  </label>
-                ))}
+          </Card>
+
+          {/* ------------------------------------------------ company info --- */}
+          <Card
+            title="Company Info"
+            subtitle="What this agent tells prospects — each agent has its own profile"
+            bodyClass="p-6"
+            actions={
+              !isNew && (
+                <button type="button" className="btn-secondary" onClick={updateCompany} disabled={savingCompany}>
+                  {savingCompany ? 'Saving…' : 'Update Info'}
+                </button>
+              )
+            }
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-4">
+              <div className="space-y-4">
+                <Field label="Company Name" id="co-name">
+                  <input id="co-name" className="input" value={company.name} onChange={(e) => setCompany('name', e.target.value)} />
+                </Field>
+                <Field label="Company Address" id="co-address">
+                  <input id="co-address" className="input" value={company.address} onChange={(e) => setCompany('address', e.target.value)} />
+                </Field>
+                <Field label="Company Description" id="co-desc">
+                  <textarea id="co-desc" className="input leading-relaxed" rows={2} value={company.description} onChange={(e) => setCompany('description', e.target.value)} />
+                </Field>
+                <Field label="Price Guidelines" id="co-price">
+                  <textarea id="co-price" className="input leading-relaxed" rows={2} value={company.pricing} onChange={(e) => setCompany('pricing', e.target.value)} />
+                </Field>
+                <div>
+                  <p className="label">Select Business Type</p>
+                  <div className="flex items-center gap-10">
+                    {['Service', 'Product'].map((t) => (
+                      <label key={t} className="inline-flex items-center gap-2.5 cursor-pointer text-sm text-muted">
+                        <input
+                          type="radio"
+                          name="business_type"
+                          className="w-4 h-4 accent-[var(--accent)]"
+                          checked={company.business_type === t}
+                          onChange={() => setCompany('business_type', t)}
+                        />
+                        {t}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Field label="Company Email" id="co-email">
+                  <input id="co-email" type="email" className="input" value={company.email} onChange={(e) => setCompany('email', e.target.value)} />
+                </Field>
+                <Field label="Country" id="co-country">
+                  <select id="co-country" className="input" value={company.country} onChange={(e) => setCompany('country', e.target.value)}>
+                    <option value="">Select Country</option>
+                    {COUNTRIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Company Region" id="co-region">
+                  <select id="co-region" className="input" value={company.region} onChange={(e) => setCompany('region', e.target.value)}>
+                    <option value="">Select Region</option>
+                    {REGIONS.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Set a Prompt" id="co-prompt">
+                  <textarea id="co-prompt" className="input leading-relaxed" rows={2} value={company.global_prompt} onChange={(e) => setCompany('global_prompt', e.target.value)} />
+                </Field>
               </div>
             </div>
-          )}
 
-          {/* Email Provider */}
+            <div className="mt-5">
+              <p className="label">{isProduct ? 'Product Knowledge' : 'Service Knowledge'}</p>
+              <textarea
+                className="input leading-relaxed font-mono text-xs"
+                rows={4}
+                value={isProduct ? company.product_knowledge : company.service_knowledge}
+                onChange={(e) => setCompany(isProduct ? 'product_knowledge' : 'service_knowledge', e.target.value)}
+                placeholder={'1. Custom Software Development\n2. Web Application Development'}
+              />
+            </div>
+
+          </Card>
+
+          {/* -------------------------------------------- email connection --- */}
           {hasEmailRole && (
-            <div className="mt-6">
+            <Card title="Email connection" subtitle="The mailbox this agent polls and sends from" bodyClass="p-6">
+            <div>
               <p className="label">Email Provider</p>
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                 {PROVIDERS.map((p) => (
@@ -391,13 +492,11 @@ export default function Agents() {
                 </p>
               )}
             </div>
-          )}
 
-          {/* Email Connection — shows the card for whichever provider is selected */}
-          {hasEmailRole && displayProvider && (
+          {/* the card for whichever provider is currently selected */}
+          {displayProvider && (
             <div className="mt-6">
-              <p className="text-[17px] text-ink mb-2.5">Email Connection</p>
-              <div className="rounded-[8px] border border-line bg-surface p-6">
+              <div className="rounded-[8px] border border-line bg-subtle p-6">
                 <p className="text-[17px] text-ink">
                   {displayProvider === 'imap' ? 'Custom IMAP/SMTP' : label(displayProvider)}
                 </p>
@@ -451,7 +550,7 @@ export default function Agents() {
                           onClick={connect}
                           disabled={connecting}
                           style={{ background: connectColour(displayProvider) }}
-                          className="mt-4 w-full h-[52px] rounded-lg text-white text-[17px] font-bold
+                          className="mt-4 w-full h-[42px] rounded-lg text-white text-[15px] font-semibold
                                      hover:brightness-105 transition-all disabled:opacity-60"
                         >
                           {connecting ? 'Connecting…' : `Connect ${shortName(displayProvider)}`}
@@ -474,32 +573,33 @@ export default function Agents() {
               </div>
             </div>
           )}
+            </Card>
+          )}
 
-          {/* Delete */}
-          {!isNew && (
-            <div className="mt-7">
+          {/* ------------------------------------------------ action bar --- */}
+          <div className="card px-5 py-4">
+            {!isNew && (
               <button
                 type="button"
                 onClick={() => setConfirmDelete(true)}
-                className="w-[52px] h-[52px] rounded-lg bg-danger text-white flex items-center justify-center
-                           hover:brightness-105 transition-all"
+                className="mb-4 w-10 h-10 rounded-lg bg-danger text-white flex items-center justify-center
+                           hover:brightness-110 transition-all"
                 aria-label={`Delete ${draft.name}`}
                 title="Delete agent"
               >
-                <IconTrash size={20} />
+                <IconTrash size={17} />
+              </button>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button className="btn-primary" disabled={saving} onClick={onUpdateClick}>
+                {saving ? 'Saving…' : isNew ? 'Create Agent' : 'Update Agent'}
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => navigate(-1)}>
+                <IconArrowLeftCircle size={17} />
+                Go Back
               </button>
             </div>
-          )}
-
-          {/* Actions */}
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <button className="btn-primary h-[46px] px-6" disabled={saving} onClick={onUpdateClick}>
-              {saving ? 'Saving…' : isNew ? 'Create Agent' : 'Update Agent'}
-            </button>
-            <button type="button" className="btn-secondary h-[46px] px-5" onClick={() => navigate(-1)}>
-              <IconArrowLeftCircle size={17} />
-              Go Back
-            </button>
           </div>
         </form>
       </div>
@@ -623,9 +723,8 @@ function Meta({ label, value }) {
 
 const ENCRYPTIONS = ['SSL', 'TLS', 'STARTTLS', 'None']
 
-// Field metrics: 48px control, 8px radius, 16px text, tinted fill, hairline border.
 const IMAP_INPUT =
-  'w-full h-[48px] px-4 rounded-[8px] bg-subtle border border-line text-[16px] text-ink ' +
+  'w-full h-[40px] px-3.5 rounded-lg bg-surface border border-line-strong text-sm text-ink ' +
   'placeholder:text-dim transition-colors outline-none focus:border-accent focus:ring-4 focus:ring-[var(--focus)]'
 
 /** Inline IMAP/SMTP credentials form, shown in place of a Connect button. */
@@ -642,41 +741,43 @@ function ImapForm({ onSave, saving }) {
   const ready = creds.email.includes('@') && creds.imap_host && creds.username && creds.password
 
   return (
-    <div className="mt-[26px] space-y-[26px]">
-      <ImapField label="Email" id="im-email">
-        <input id="im-email" type="email" className={IMAP_INPUT} value={creds.email} onChange={(e) => set('email', e.target.value)} />
-      </ImapField>
+    <div className="mt-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
+        <ImapField label="Email" id="im-email" className="sm:col-span-2">
+          <input id="im-email" type="email" className={IMAP_INPUT} value={creds.email} onChange={(e) => set('email', e.target.value)} />
+        </ImapField>
 
-      <ImapField label="IMAP Host" id="im-host">
-        <input id="im-host" className={IMAP_INPUT} value={creds.imap_host} onChange={(e) => set('imap_host', e.target.value)} />
-      </ImapField>
+        <ImapField label="IMAP Host" id="im-host">
+          <input id="im-host" className={IMAP_INPUT} value={creds.imap_host} onChange={(e) => set('imap_host', e.target.value)} />
+        </ImapField>
 
-      <ImapField label="IMAP Port" id="im-port">
-        <input id="im-port" type="number" className={`${IMAP_INPUT} tabular-nums`} value={creds.imap_port} onChange={(e) => set('imap_port', Number(e.target.value))} />
-      </ImapField>
+        <ImapField label="IMAP Port" id="im-port">
+          <input id="im-port" type="number" className={`${IMAP_INPUT} tabular-nums`} value={creds.imap_port} onChange={(e) => set('imap_port', Number(e.target.value))} />
+        </ImapField>
 
-      <ImapField label="Encryption" id="im-enc">
-        <select id="im-enc" className={`${IMAP_INPUT} appearance-none`} value={creds.encryption} onChange={(e) => set('encryption', e.target.value)}>
-          {ENCRYPTIONS.map((x) => (
-            <option key={x} value={x}>{x}</option>
-          ))}
-        </select>
-      </ImapField>
+        <ImapField label="Username" id="im-user">
+          <input id="im-user" className={IMAP_INPUT} value={creds.username} onChange={(e) => set('username', e.target.value)} />
+        </ImapField>
 
-      <ImapField label="Username" id="im-user">
-        <input id="im-user" className={IMAP_INPUT} value={creds.username} onChange={(e) => set('username', e.target.value)} />
-      </ImapField>
+        <ImapField label="Password" id="im-pass">
+          <input id="im-pass" type="password" className={IMAP_INPUT} value={creds.password} onChange={(e) => set('password', e.target.value)} />
+        </ImapField>
 
-      <ImapField label="Password" id="im-pass">
-        <input id="im-pass" type="password" className={IMAP_INPUT} value={creds.password} onChange={(e) => set('password', e.target.value)} />
-      </ImapField>
+        <ImapField label="Encryption" id="im-enc">
+          <select id="im-enc" className={`${IMAP_INPUT} appearance-none`} value={creds.encryption} onChange={(e) => set('encryption', e.target.value)}>
+            {ENCRYPTIONS.map((x) => (
+              <option key={x} value={x}>{x}</option>
+            ))}
+          </select>
+        </ImapField>
+      </div>
 
       <button
         type="button"
         onClick={() => onSave(creds)}
         disabled={!ready || saving}
         style={{ background: '#2fbf72' }}
-        className="h-[50px] px-6 rounded-[8px] text-white text-[16px] font-bold hover:brightness-105 transition-all
+        className="mt-5 h-[40px] px-5 rounded-lg text-white text-sm font-semibold hover:brightness-105 transition-all
                    disabled:opacity-50 disabled:pointer-events-none"
       >
         {saving ? 'Saving…' : 'Save IMAP Settings'}
@@ -685,10 +786,10 @@ function ImapForm({ onSave, saving }) {
   )
 }
 
-function ImapField({ label, id, children }) {
+function ImapField({ label, id, className = '', children }) {
   return (
-    <div>
-      <label className="block text-[16px] font-normal leading-none text-ink mb-[10px]" htmlFor={id}>
+    <div className={className}>
+      <label className="label" htmlFor={id}>
         {label}
       </label>
       {children}

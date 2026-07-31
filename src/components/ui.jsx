@@ -6,66 +6,89 @@ import {
   IconArrowUp,
   IconCheck,
   IconClose,
+  IconInfo,
   IconMail,
   IconSearch,
 } from './icons.jsx'
 
 /* -------------------------------------------------------------- stat tiles */
 
-// KPI tile — a filled gradient panel with white text. `tone` picks which of the
-// six gradients it wears; the palette lives in CSS so presets can restyle it.
-const KPI_TONES = {
-  indigo: 'var(--kpi-indigo)',
-  sky: 'var(--kpi-sky)',
-  emerald: 'var(--kpi-emerald)',
-  violet: 'var(--kpi-violet)',
-  amber: 'var(--kpi-amber)',
-  rose: 'var(--kpi-rose)',
+/**
+ * KPI tile — a quiet surface panel. Saturated colour is spent on small marks
+ * only: the icon chip on the one `primary` metric, the sparkline, and the delta
+ * pill where the colour actually means something (up/down). Text always wears
+ * text tokens, never a data colour, so every theme preset restyles it for free.
+ *
+ * `delta` is a percentage against the previous period, or null when there is no
+ * earlier period to compare against — in which case nothing is claimed.
+ */
+// Tinted chips, not filled panels: the hue identifies the metric, the ink stays
+// a text token, and every step comes from the theme so presets restyle it.
+const CHIP_TONES = {
+  accent: 'bg-accent-soft text-accent-ink',
+  info: 'bg-info-soft text-info-ink',
+  violet: 'bg-violet-soft text-violet-ink',
+  good: 'bg-good-soft text-good-ink',
+  warn: 'bg-warn-soft text-warn-ink',
+  neutral: 'bg-subtle text-faint',
 }
 
-export function StatCard({ label, value, period, hint, delta, trend, tone = 'indigo', icon, progress }) {
-  const up = delta != null && delta >= 0
-  const DeltaIcon = up ? IconArrowUp : IconArrowDown
+export function StatCard({
+  label, value, period, hint, delta, deltaLabel = 'vs previous 7 days',
+  trend, trendColor, icon, progress, tone = 'accent', primary = false,
+}) {
+  const hasDelta = delta != null
+  const rising = hasDelta && delta > 0
+  const falling = hasDelta && delta < 0
+  const DeltaIcon = rising ? IconArrowUp : IconArrowDown
+  // Every metric here is one where more is better, so direction maps to status.
+  const deltaTone = rising ? 'bg-good-soft text-good-ink'
+    : falling ? 'bg-danger-soft text-danger-ink'
+    : 'bg-subtle text-faint'
 
   return (
-    <div
-      className="relative overflow-hidden rounded-2xl p-5 text-white transition-transform duration-200 hover:-translate-y-1"
-      style={{ backgroundImage: KPI_TONES[tone] ?? KPI_TONES.indigo, boxShadow: 'var(--shadow-card)' }}
-    >
-      {/* soft highlight so the fill doesn't read flat */}
-      <span
-        className="pointer-events-none absolute -right-8 -top-10 w-32 h-32 rounded-full"
-        style={{ background: 'rgba(255,255,255,0.14)' }}
-      />
-
-      <div className="relative flex items-start justify-between gap-3">
-        <span className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+    <div className="card relative overflow-hidden p-5 flex flex-col transition-all duration-200 hover:border-line-strong hover:-translate-y-0.5">
+      {/* The lead metric carries a hairline of its own colour along the top. */}
+      {primary && (
+        <span
+          className="absolute inset-x-0 top-0 h-[3px] rounded-t-2xl"
+          style={{ background: 'var(--accent)' }}
+        />
+      )}
+      <div className="flex items-start justify-between gap-3">
+        <span className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+          CHIP_TONES[tone] ?? CHIP_TONES.accent}`}>
           {icon}
         </span>
-        {trend && <Sparkline data={trend} color="rgba(255,255,255,0.95)" ring="transparent" />}
+        {trend && <Sparkline data={trend} color={trendColor ?? 'var(--accent)'} />}
       </div>
 
       {/* Proportional figures — tabular-nums is for columns, not display numbers. */}
-      <div className="relative mt-4 text-[32px] leading-none font-extrabold tracking-tight">{value}</div>
-      <div className="relative mt-2 text-sm font-semibold text-white/90">
+      <div className="mt-4 text-[30px] leading-none font-semibold tracking-tight text-ink">{value}</div>
+      <p className="mt-2 text-[13px] font-medium text-muted">
         {label}
-        {period && <span className="ml-1 font-normal text-white/70">· {period}</span>}
-      </div>
+        {period && <span className="text-faint"> · {period}</span>}
+      </p>
 
       {progress && progress.max > 0 && (
-        <div className="relative mt-4 h-1.5 rounded-full bg-white/25 overflow-hidden">
+        // Track is a lighter step of the fill's own ramp, so the state reads
+        // across the whole bar rather than only where it is filled.
+        <div className="mt-4 h-1.5 rounded-full bg-accent-soft overflow-hidden">
           <div
-            className="h-full rounded-full bg-white transition-[width] duration-500"
+            className="h-full rounded-full bg-accent transition-[width] duration-500"
             style={{ width: `${Math.min(100, (progress.value / progress.max) * 100)}%` }}
           />
         </div>
       )}
 
-      {(delta != null || hint) && (
-        <div className="relative mt-3 flex items-center gap-2 text-xs text-white/85">
-          {delta != null && (
-            <span className="inline-flex items-center gap-0.5 font-bold rounded-full bg-white/20 px-2 py-0.5">
-              <DeltaIcon size={12} />
+      {(hasDelta || hint) && (
+        <div className="mt-3 flex items-center gap-2 text-xs text-faint min-w-0">
+          {hasDelta && (
+            <span
+              className={`inline-flex items-center gap-0.5 font-semibold rounded-full px-1.5 py-0.5 shrink-0 ${deltaTone}`}
+              title={deltaLabel}
+            >
+              {delta !== 0 && <DeltaIcon size={11} />}
               {Math.abs(delta)}%
             </span>
           )}
@@ -285,6 +308,17 @@ export function Switch({ checked, onChange, label, hint }) {
 
 /* ----------------------------------------------------------------- toasts */
 
+// The panel stays a normal surface card and the colour goes into one small
+// solid chip. A tinted panel washes out — especially in dark mode, where the
+// soft steps are barely 16% opacity — while a saturated mark stays crisp and
+// the message keeps full ink contrast.
+const TOAST_TONES = {
+  good: { colour: 'var(--good)', Icon: IconCheck },
+  bad: { colour: 'var(--danger)', Icon: IconAlert },
+  warn: { colour: 'var(--warn)', Icon: IconAlert },
+  info: { colour: 'var(--accent)', Icon: IconInfo },
+}
+
 const ToastContext = createContext(() => {})
 export const useToast = () => useContext(ToastContext)
 
@@ -304,20 +338,27 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            role="status"
-            className="animate-fade-up flex items-center gap-2.5 rounded-xl border border-line bg-raised
-                       pl-3 pr-4 py-2.5 shadow-pop text-sm text-ink"
-          >
-            <span className={t.tone === 'bad' ? 'text-danger' : 'text-good'}>
-              {t.tone === 'bad' ? <IconAlert size={16} /> : <IconCheck size={16} />}
-            </span>
-            {t.message}
-          </div>
-        ))}
+      {/* Top right: above the fold, where the eye already is after an action. */}
+      <div className="fixed top-5 right-5 z-[70] flex flex-col gap-2 pointer-events-none">
+        {toasts.map((t) => {
+          const { colour, Icon } = TOAST_TONES[t.tone] ?? TOAST_TONES.good
+          return (
+            <div
+              key={t.id}
+              role="status"
+              className="animate-toast-in flex items-center gap-3 rounded-xl border border-line
+                         bg-surface pl-2.5 pr-4 py-2.5 shadow-pop max-w-sm"
+            >
+              <span
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-white"
+                style={{ background: colour }}
+              >
+                <Icon size={15} />
+              </span>
+              <span className="min-w-0 text-[13.5px] font-medium text-ink">{t.message}</span>
+            </div>
+          )
+        })}
       </div>
     </ToastContext.Provider>
   )

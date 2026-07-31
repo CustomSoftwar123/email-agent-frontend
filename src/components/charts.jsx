@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { IconChart, IconTable } from './icons.jsx'
 
-// Charts follow the house mark specs: single series (so no legend — the title
-// names it), columns capped at 24px with a 4px rounded cap and a square
-// baseline, a 2px surface gap between neighbours, hairline solid gridlines,
-// and axis text in the muted ink token rather than the series colour.
+// Charts follow the house mark specs: columns capped at 24px with a 4px rounded
+// cap and a square baseline, a 2px surface gap between neighbours, hairline
+// solid gridlines, and axis text in the muted ink token rather than the series
+// colour. Series colours come from --series-N, assigned in fixed order so a
+// series keeps its hue whatever else is on the plot.
 
 const GAP = 2
 const MAX_COL = 24
@@ -69,69 +70,111 @@ export function Sparkline({ data, width = 104, height = 30, color = 'var(--accen
   )
 }
 
+/** Identity you can read without matching colours by eye. */
+function Legend({ series }) {
+  return (
+    <ul className="flex flex-wrap items-center gap-x-4 gap-y-1">
+      {series.map((s) => (
+        <li key={s.key} className="inline-flex items-center gap-1.5 text-xs text-muted">
+          <span className="w-2.5 h-2.5 rounded-[3px] shrink-0" style={{ background: s.color }} />
+          {s.label}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function ViewToggle({ asTable, setAsTable }) {
+  return (
+    <div className="inline-flex rounded-xl border border-line p-1 bg-subtle shrink-0" role="group" aria-label="Chart display">
+      {[
+        { key: false, label: 'Chart', Icon: IconChart },
+        { key: true, label: 'Table', Icon: IconTable },
+      ].map(({ key, label, Icon }) => (
+        <button
+          key={label}
+          type="button"
+          onClick={() => setAsTable(key)}
+          aria-pressed={asTable === key}
+          className={`inline-flex items-center gap-1.5 px-2 h-7 rounded-md text-xs font-medium transition-colors ${
+            asTable === key ? 'bg-surface text-ink shadow-card' : 'text-faint hover:text-ink'
+          }`}
+        >
+          <Icon size={14} />
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 /**
- * Single-series column chart with a hover tooltip and a table view — the table
- * is the non-visual fallback, so nothing is gated behind reading the plot.
+ * Grouped column chart over a shared baseline — one group per period, one
+ * column per series. A single series draws no legend (the card title names it);
+ * two or more always do, so identity never rests on colour alone. The table
+ * view is the non-visual twin, so no value is gated behind reading the plot.
+ *
+ *   data   [{ label: 'Jul 29', values: { sent: 4, replies: 2 } }, …]
+ *   series [{ key: 'sent', label: 'Sent', color: 'var(--series-1)' }, …]
  */
-export function ColumnChart({ data, valueLabel = 'Value', height = 200 }) {
+export function ColumnChart({ data, series, height = 240, labelEvery = 2 }) {
   const [wrapRef, width] = useWidth()
   const [hover, setHover] = useState(null)
   const [asTable, setAsTable] = useState(false)
 
   const padL = 34
   const padR = 6
-  const padT = 14
+  const padT = 18
   const padB = 24
   const innerW = Math.max(0, width - padL - padR)
   const innerH = height - padT - padB
 
-  const max = niceMax(Math.max(...data.map((d) => d.value), 1))
+  const peak = Math.max(...data.flatMap((d) => series.map((s) => d.values[s.key] ?? 0)), 1)
+  const max = niceMax(peak)
   const ticks = [0, max / 2, max]
   const band = data.length ? innerW / data.length : 0
-  const colW = Math.max(2, Math.min(MAX_COL, band - GAP))
-  const peakIndex = data.reduce((best, d, i) => (d.value > data[best].value ? i : best), 0)
+  // Each group keeps a gap on both sides, so neighbouring days stay separate
+  // without a stroke drawn round anything.
+  const colW = Math.max(2, Math.min(MAX_COL, (band - GAP * (series.length + 1)) / series.length))
+  const groupW = colW * series.length + GAP * (series.length - 1)
 
-  const xOf = (i) => padL + i * band + (band - colW) / 2
+  const xOf = (i, si) => padL + i * band + (band - groupW) / 2 + si * (colW + GAP)
   const yOf = (v) => padT + innerH - (v / max) * innerH
+
+  // Label the tallest column of the lead series only — a number on every point
+  // is chaos and goes unread.
+  const lead = series[0].key
+  const peakIndex = data.reduce(
+    (best, d, i) => ((d.values[lead] ?? 0) > (data[best].values[lead] ?? 0) ? i : best), 0)
+  const peakValue = data[peakIndex]?.values[lead] ?? 0
 
   return (
     <div>
-      <div className="flex items-center justify-end mb-1">
-        <div className="inline-flex rounded-xl border border-line p-1 bg-subtle" role="group" aria-label="Chart display">
-          {[
-            { key: false, label: 'Chart', Icon: IconChart },
-            { key: true, label: 'Table', Icon: IconTable },
-          ].map(({ key, label, Icon }) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => setAsTable(key)}
-              aria-pressed={asTable === key}
-              className={`inline-flex items-center gap-1.5 px-2 h-7 rounded-md text-xs font-medium transition-colors ${
-                asTable === key ? 'bg-surface text-ink shadow-card' : 'text-faint hover:text-ink'
-              }`}
-            >
-              <Icon size={14} />
-              {label}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+        {series.length > 1 ? <Legend series={series} /> : <span />}
+        <ViewToggle asTable={asTable} setAsTable={setAsTable} />
       </div>
 
       {asTable ? (
-        <div className="max-h-[200px] overflow-auto rounded-lg border border-line">
+        <div className="overflow-auto rounded-lg border border-line" style={{ maxHeight: height }}>
           <table className="w-full">
             <thead>
               <tr>
                 <th className="th py-2">Day</th>
-                <th className="th py-2 text-right">{valueLabel}</th>
+                {series.map((s) => (
+                  <th key={s.key} className="th py-2 text-right">{s.label}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {data.map((d) => (
                 <tr key={d.label}>
                   <td className="td py-1.5">{d.label}</td>
-                  <td className="td py-1.5 text-right tabular-nums text-ink">{d.value}</td>
+                  {series.map((s) => (
+                    <td key={s.key} className="td py-1.5 text-right tabular-nums text-ink">
+                      {d.values[s.key] ?? 0}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -140,14 +183,8 @@ export function ColumnChart({ data, valueLabel = 'Value', height = 200 }) {
       ) : (
         <div ref={wrapRef} className="relative" style={{ height }}>
           {width > 0 && (
-            <svg width={width} height={height} role="img" aria-label={`${valueLabel} per day`}>
-              {/* Columns wear the shell gradient so the chart matches the sidebar. */}
-              <defs>
-                <linearGradient id="colGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--chart-from)" />
-                  <stop offset="100%" stopColor="var(--chart-to)" />
-                </linearGradient>
-              </defs>
+            <svg width={width} height={height} role="img"
+                 aria-label={`${series.map((s) => s.label).join(' and ')} per day`}>
               {ticks.map((t) => (
                 <g key={t}>
                   <line
@@ -173,30 +210,38 @@ export function ColumnChart({ data, valueLabel = 'Value', height = 200 }) {
               ))}
 
               {data.map((d, i) => {
-                const h = Math.max(1, (d.value / max) * innerH)
                 const active = hover === i
                 return (
                   <g key={d.label}>
-                    <path
-                      d={columnPath(xOf(i), yOf(d.value), colW, h, 6)}
-                      fill="url(#colGrad)"
-                      opacity={hover === null || active ? 1 : 0.4}
-                      style={{ transition: 'opacity .12s' }}
-                    />
-                    {i === peakIndex && (
+                    {series.map((s, si) => {
+                      const v = d.values[s.key] ?? 0
+                      if (v <= 0) return null
+                      return (
+                        <path
+                          key={s.key}
+                          d={columnPath(xOf(i, si), yOf(v), colW, Math.max(1, (v / max) * innerH), 4)}
+                          fill={s.color}
+                          opacity={hover === null || active ? 1 : 0.35}
+                          style={{ transition: 'opacity .12s' }}
+                        />
+                      )
+                    })}
+
+                    {i === peakIndex && peakValue > 0 && (
                       <text
-                        x={xOf(i) + colW / 2}
-                        y={yOf(d.value) - 5}
+                        x={xOf(i, 0) + colW / 2}
+                        y={yOf(peakValue) - 6}
                         textAnchor="middle"
                         fontSize="11"
                         fontWeight="700"
                         fill="var(--ink)"
                         style={{ fontVariantNumeric: 'tabular-nums' }}
                       >
-                        {d.value}
+                        {peakValue}
                       </text>
                     )}
-                    {/* Hit target spans the whole band, not just the column. */}
+
+                    {/* Hit target spans the whole band, not just the columns. */}
                     <rect
                       x={padL + i * band}
                       y={padT}
@@ -206,8 +251,10 @@ export function ColumnChart({ data, valueLabel = 'Value', height = 200 }) {
                       onMouseEnter={() => setHover(i)}
                       onMouseLeave={() => setHover(null)}
                     />
-                    {i % 2 === 0 && (
-                      <text x={xOf(i) + colW / 2} y={height - 7} textAnchor="middle" fontSize="10" fill="var(--faint)">
+
+                    {i % labelEvery === 0 && (
+                      <text x={padL + i * band + band / 2} y={height - 7} textAnchor="middle"
+                            fontSize="10" fill="var(--faint)">
                         {d.label}
                       </text>
                     )}
@@ -220,17 +267,70 @@ export function ColumnChart({ data, valueLabel = 'Value', height = 200 }) {
           {hover !== null && (
             <div
               className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg border border-line
-                         bg-raised px-2.5 py-1.5 shadow-pop"
-              style={{ left: xOf(hover) + colW / 2, top: yOf(data[hover].value) - 8 }}
+                         bg-raised px-3 py-2 shadow-pop min-w-[132px]"
+              style={{
+                left: Math.min(Math.max(padL + hover * band + band / 2, 70), width - 70),
+                top: padT - 6,
+              }}
             >
-              <div className="text-[11px] text-faint whitespace-nowrap">{data[hover].label}</div>
-              <div className="text-sm font-semibold text-ink tabular-nums">
-                {data[hover].value} <span className="font-normal text-muted">{valueLabel.toLowerCase()}</span>
-              </div>
+              <div className="text-[11px] text-faint whitespace-nowrap mb-1">{data[hover].label}</div>
+              {series.map((s) => (
+                <div key={s.key} className="flex items-center gap-2 whitespace-nowrap">
+                  <span className="w-2 h-2 rounded-[2px] shrink-0" style={{ background: s.color }} />
+                  <span className="text-[11px] text-muted flex-1">{s.label}</span>
+                  <span className="text-[13px] font-semibold text-ink tabular-nums">
+                    {data[hover].values[s.key] ?? 0}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * Horizontal bars for a handful of named categories — the right form when the
+ * labels matter more than the shape and there are too few points for a plot.
+ * Every value is direct-labelled at the bar end, so there is nothing to hover
+ * for and no table twin needed.
+ */
+export function BarList({ items, emptyLabel = 'Nothing yet.' }) {
+  const max = Math.max(...items.map((i) => i.value), 1)
+  const total = items.reduce((sum, i) => sum + i.value, 0)
+
+  if (!total) {
+    return <p className="py-8 text-center text-sm text-faint">{emptyLabel}</p>
+  }
+
+  return (
+    <ul className="space-y-3.5">
+      {items.map((item) => (
+        <li key={item.label}>
+          <div className="flex items-baseline justify-between gap-3 mb-1.5">
+            <span className="text-[13px] font-medium text-muted capitalize">{item.label}</span>
+            <span className="text-[13px] font-semibold text-ink tabular-nums">
+              {item.value}
+              <span className="ml-1.5 text-[11px] font-normal text-faint">
+                {Math.round((item.value / total) * 100)}%
+              </span>
+            </span>
+          </div>
+          {/* Track is the surface doing the work; the fill is rounded at the
+              data end and square at the baseline, like every other mark. */}
+          <div className="h-2 rounded-full bg-subtle overflow-hidden"
+               role="img" aria-label={`${item.label}: ${item.value}`}>
+            {item.value > 0 && (
+              <div
+                className="h-full rounded-r-full transition-[width] duration-500"
+                style={{ width: `${Math.max(3, (item.value / max) * 100)}%`, background: item.color }}
+              />
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
   )
 }

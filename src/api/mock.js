@@ -27,7 +27,6 @@ const db = {
     poller_running: true,
     poll_interval: 30,
     sent_today: 14,
-    daily_limit: 200,
     threads: 37,
     leads: 11,
     replies_today: 5,
@@ -156,7 +155,6 @@ const db = {
     },
     agent: {
       persona: 'Friendly, concise sales rep. Never pushy. Always sign off with the company name.',
-      daily_send_limit: 200,
       capture_leads: true,
     },
     storage: { database: 'sqlite:///agent.db', leads_out: 'leads.csv' },
@@ -218,10 +216,128 @@ const db = {
   ],
 }
 
+// Admin module sample data.
+db.plans = [
+  { id: 1, name: 'Starter', price: 29, currency: 'USD', interval_unit: 'month',
+    mailbox_limit: 1, features: ['1 mailbox', 'AI auto-replies', 'Lead capture'],
+    is_active: true, sort_order: 1 },
+  { id: 2, name: 'Growth', price: 79, currency: 'USD', interval_unit: 'month',
+    mailbox_limit: 5, features: ['5 mailboxes', 'AI auto-replies', 'Lead capture', 'Priority support'],
+    is_active: true, sort_order: 2 },
+  { id: 3, name: 'Agency', price: 199, currency: 'USD', interval_unit: 'month',
+    mailbox_limit: null, features: ['Unlimited mailboxes', 'Everything in Growth', 'Onboarding call'],
+    is_active: true, sort_order: 3 },
+]
+
+db.accounts = [
+  { id: 1, email: 'demo@example.com', name: 'Demo user', role: 'superadmin',
+    plan_id: 3, plan_name: 'Agency', price: 199, currency: 'USD', interval_unit: 'month',
+    mailbox_limit: null, agents: 2, mailboxes: 1, leads: 11, created_at: '2026-07-01 09:00:00' },
+  { id: 2, email: 'client@acme.com', name: 'Acme Ltd', role: 'user',
+    plan_id: 1, plan_name: 'Starter', price: 29, currency: 'USD', interval_unit: 'month',
+    mailbox_limit: 1, agents: 1, mailboxes: 1, leads: 4, created_at: '2026-07-14 11:20:00' },
+]
+
 let ids = 100
 const nextId = () => ++ids
 
 export const mock = {
+  /* ---------------------------------------------------------------- auth.
+     The demo has a single pretend account — any credentials are accepted so
+     the UI can be walked through without a backend running. */
+  async signup({ email, name }) {
+    await delay()
+    return { token: 'demo-token', user: { id: 1, email, name: name || 'Demo user' } }
+  },
+  async login({ email }) {
+    await delay()
+    return { token: 'demo-token', user: { id: 1, email, name: 'Demo user' } }
+  },
+  async me() {
+    await delay()
+    return { id: 1, email: 'demo@example.com', name: 'Demo user', role: 'superadmin' }
+  },
+  async logout() { await delay(); return { ok: true } },
+
+  /* --------------------------------------------------------------- admin. */
+  async getPlans() { await delay(); return clone(db.plans) },
+  async createPlan(p) {
+    await delay()
+    const row = { ...p, id: nextId(), features: p.features ?? [] }
+    db.plans.push(row)
+    return clone(row)
+  },
+  async updatePlan(p) {
+    await delay()
+    const i = db.plans.findIndex((x) => x.id === p.id)
+    if (i >= 0) db.plans[i] = { ...db.plans[i], ...p }
+    return clone(db.plans[i])
+  },
+  async deletePlan(id) {
+    await delay()
+    db.plans = db.plans.filter((p) => p.id !== id)
+    db.accounts.forEach((a) => { if (a.plan_id === id) { a.plan_id = null; a.plan_name = null } })
+    return { ok: true }
+  },
+  async getAccounts() { await delay(); return clone(db.accounts) },
+  async getAccount(id) {
+    await delay()
+    const a = db.accounts.find((x) => x.id === id)
+    return clone({
+      ...a,
+      plan: db.plans.find((p) => p.id === a.plan_id) ?? null,
+      mailboxes_used: a.mailboxes, mailbox_cap: a.mailbox_limit,
+      agents: [], threads: 12, sent_total: 84, received_total: 61,
+    })
+  },
+  async updateAccount(id, patch) {
+    await delay()
+    const a = db.accounts.find((x) => x.id === id)
+    Object.assign(a, patch)
+    if ('plan_id' in patch) a.plan_name = db.plans.find((p) => p.id === patch.plan_id)?.name ?? null
+    return clone(a)
+  },
+  async renewAccount(id) {
+    await delay()
+    const a = db.accounts.find((x) => x.id === id)
+    if (a) { a.plan_status = 'active'; a.replies_used = 0; a.days_left = 30 }
+    return clone(a)
+  },
+  async getBilling() {
+    await delay()
+    const plan = db.plans[1]
+    return {
+      plan: clone(plan),
+      price: plan.price,
+      currency: plan.currency,
+      usage: {
+        plan_status: 'active', role: 'user',
+        mailboxes_used: 1, mailbox_cap: plan.mailbox_limit,
+        replies_used: 412, reply_cap: plan.reply_limit ?? 2000,
+        period_started_at: '2026-07-14 09:00:00',
+        period_ends_at: '2026-08-14 09:00:00',
+        trial_ends_at: null, days_left: 15,
+      },
+      available_plans: clone(db.plans.filter((p) => p.is_active)),
+    }
+  },
+  async getAvailablePlans() { await delay(); return clone(db.plans.filter((p) => p.is_active)) },
+  async choosePlan(id) {
+    await delay()
+    return { plan: clone(db.plans.find((p) => p.id === id)), user: { plan_status: 'pending' } }
+  },
+  async assignPlan(id, plan_id) {
+    await delay()
+    const acc = db.accounts.find((a) => a.id === id)
+    const plan = db.plans.find((p) => p.id === plan_id)
+    if (acc) {
+      acc.plan_id = plan_id
+      acc.plan_name = plan?.name ?? null
+      acc.mailbox_limit = plan?.mailbox_limit ?? null
+    }
+    return clone(acc)
+  },
+
   async getStatus() { await delay(); return clone(db.status) },
   async getActivity() { await delay(); return clone(db.activity) },
 

@@ -1,36 +1,44 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api/client.js'
+import { isSuperAdmin, useAuth } from '../lib/auth.jsx'
 import { PRESETS, useTheme } from '../lib/theme.jsx'
+import { BrandLock } from './brand.jsx'
+import { Avatar } from './ui.jsx'
 import {
+  IconAlert,
   IconCheck,
   IconClose,
   IconPalette,
   IconDashboard,
   IconChevronDown,
-  IconMail,
+  IconClock,
   IconMenu,
   IconMoon,
   IconPlus,
   IconRobot,
-  IconSparkles,
   IconSun,
+  IconStar,
+  IconUnlock,
 } from './icons.jsx'
 
+// `admin: true` keeps a group out of the sidebar for everyone but super admins.
 const NAV = [
   {
     group: 'Overview',
     items: [{ to: '/', label: 'Dashboard', Icon: IconDashboard, end: true }],
   },
   {
-    group: 'Activities',
-    items: [{ to: '/emails', label: 'Emails', Icon: IconMail }],
-  },
-  {
     group: 'Configuration',
     items: [
       { to: '/agents', label: 'Manage Agents', Icon: IconRobot, agents: true },
+      { to: '/billing', label: 'Billing & usage', Icon: IconClock },
     ],
+  },
+  {
+    group: 'Admin',
+    admin: true,
+    items: [{ to: '/pricing', label: 'Plans & pricing', Icon: IconStar }],
   },
 ]
 
@@ -40,6 +48,7 @@ export default function Layout() {
   const [navOpen, setNavOpen] = useState(false)
   const [agents, setAgents] = useState([])
   const { theme, toggle } = useTheme()
+  const { user } = useAuth()
   const location = useLocation()
 
   // The agent list lives in the sidebar, so it reloads whenever an agent is
@@ -70,13 +79,7 @@ export default function Layout() {
                       ${navOpen ? 'translate-x-0 shadow-pop' : '-translate-x-full'}`}
         >
           <div className="flex items-center gap-2.5 px-4 pt-[18px] pb-3">
-            <span className="w-9 h-9 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center shrink-0 text-white">
-              <IconSparkles size={17} />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[14px] font-semibold leading-tight tracking-tight text-white">Email Agent</span>
-              <span className="block text-[11px] text-sidebar-label leading-tight">Standalone edition</span>
-            </span>
+            <BrandLock tone="light" />
             <button
               className="ml-auto lg:hidden w-9 h-9 rounded-lg flex items-center justify-center text-sidebar-ink hover:bg-sidebar-active"
               onClick={() => setNavOpen(false)}
@@ -87,7 +90,7 @@ export default function Layout() {
           </div>
 
           <nav className="flex-1 overflow-y-auto pb-3">
-            {NAV.map(({ group, items }) => (
+            {NAV.filter((section) => !section.admin || isSuperAdmin(user)).map(({ group, items }) => (
               <div key={group}>
                 <p className="px-6 mt-6 mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-sidebar-label">
                   {group}
@@ -139,15 +142,12 @@ export default function Layout() {
               <IconMenu />
             </button>
 
-            <p className="text-[15px] font-bold text-ink">
-              Welcome back<span className="hidden sm:inline">, operator</span>
+            <p className="text-[15px] font-bold text-ink truncate">
+              Welcome back
+              <span className="hidden sm:inline">, {user?.name || user?.email || 'operator'}</span>
             </p>
 
             <div className="ml-auto flex items-center gap-2">
-              <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-good-soft px-3 h-8 text-xs font-bold text-good-ink">
-                <span className="w-1.5 h-1.5 rounded-full bg-good" />
-                Standalone deployment
-              </span>
               <ThemePicker />
               <button
                 className="btn-icon"
@@ -157,8 +157,11 @@ export default function Layout() {
               >
                 {theme === 'dark' ? <IconSun /> : <IconMoon />}
               </button>
+              <AccountMenu />
             </div>
           </header>
+
+          <PlanNotice user={user} />
 
           <main className="flex-1 min-w-0 flex flex-col">
             <Outlet />
@@ -186,6 +189,84 @@ export function PageHeader({ eyebrow, icon, title, subtitle, actions }) {
         {subtitle && <p className="ph-sub">{subtitle}</p>}
       </div>
       {actions && <div className="flex items-center gap-2.5 flex-wrap">{actions}</div>}
+    </div>
+  )
+}
+
+/**
+ * A strip under the header for the two account states worth interrupting for.
+ * Nothing renders for a normal active account.
+ */
+function PlanNotice({ user }) {
+  const status = user?.plan_status
+  if (status !== 'pending' && status !== 'suspended') return null
+
+  const suspended = status === 'suspended'
+  return (
+    <div
+      className={`px-4 sm:px-6 py-2.5 flex items-center gap-2.5 text-[13px] font-medium border-b ${
+        suspended
+          ? 'bg-danger-soft text-danger-ink border-danger/20'
+          : 'bg-warn-soft text-warn-ink border-warn/20'
+      }`}
+      role="status"
+    >
+      <IconAlert size={15} className="shrink-0" />
+      {suspended
+        ? 'This account is suspended — the agent has stopped answering your mail. Contact your administrator.'
+        : 'Your plan is awaiting confirmation. Everything works in the meantime.'}
+    </div>
+  )
+}
+
+/** Who is signed in, and the way out. */
+function AccountMenu() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    const close = () => setOpen(false)
+    window.addEventListener('click', close)
+    return () => window.removeEventListener('click', close)
+  }, [open])
+
+  const name = user?.name || user?.email || ''
+
+  async function signOut() {
+    await logout()
+    navigate('/login', { replace: true })
+  }
+
+  return (
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="rounded-full transition-opacity hover:opacity-80"
+        aria-label="Account"
+        title={name}
+      >
+        <Avatar name={name} size={32} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-2 w-60 rounded-lg border border-line bg-surface shadow-pop p-1.5 z-50">
+          <div className="px-2.5 py-2">
+            <p className="text-[13px] font-semibold text-ink truncate">{user?.name || 'Signed in'}</p>
+            <p className="text-[11px] text-faint truncate">{user?.email}</p>
+          </div>
+          <div className="border-t border-line my-1" />
+          <button
+            onClick={signOut}
+            className="w-full flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px]
+                       font-medium text-ink hover:bg-subtle transition-colors"
+          >
+            <IconUnlock size={15} className="text-faint" />
+            Sign out
+          </button>
+        </div>
+      )}
     </div>
   )
 }

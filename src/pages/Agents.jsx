@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '../components/Layout.jsx'
 import Modal from '../components/Modal.jsx'
-import { Card, Empty, Skeleton, StatusBadge, useToast } from '../components/ui.jsx'
+import AlertDialog from '../components/AlertDialog.jsx'
+import SuccessDialog from '../components/SuccessDialog.jsx'
+import { Card, Empty, Skeleton, useToast } from '../components/ui.jsx'
 import {
   IconAlert,
   IconArrowLeftCircle,
@@ -10,11 +12,13 @@ import {
   IconChevronDown,
   IconClose,
   IconEdit,
-  IconKey,
   IconRobot,
   IconTrash,
 } from '../components/icons.jsx'
 import { api } from '../api/client.js'
+
+/** 402 is the backend refusing on plan grounds, not a broken mailbox. */
+const isPlanLimit = (err) => err?.status === 402
 
 // Field vocabulary for the Edit Agent form.
 const PERSONALITIES = ['Friendly', 'Professional', 'Confident', 'Helpful', 'Calm', 'Energetic']
@@ -74,7 +78,11 @@ export default function Agents() {
   const [promptOpen, setPromptOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmSwitch, setConfirmSwitch] = useState(false)
+  // Set when the backend refuses a connection because the plan is full.
+  const [limitMessage, setLimitMessage] = useState('')
   const [connecting, setConnecting] = useState(false)
+  // Provider name shown in the "connected" dialog; empty means it is closed.
+  const [connectedProvider, setConnectedProvider] = useState('')
   const [savingCompany, setSavingCompany] = useState(false)
   const toast = useToast()
 
@@ -111,6 +119,20 @@ export default function Agents() {
       cancelled = true
     }
   }, [id, isNew, navigate])
+
+  // The OAuth callback redirects back here with the outcome in the query string.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const connected = params.get('connected')
+    const failed = params.get('error')
+    if (!connected && !failed) return
+    // A completed handshake gets a dialog to acknowledge — the user has just
+    // come back from the provider and a toast would expire unseen.
+    if (connected) setConnectedProvider(connected)
+    else toast(`${params.get('provider') || 'Connect'} failed — ${failed}`, 'bad')
+    // Strip the params so a refresh does not repeat the message.
+    navigate(window.location.pathname, { replace: true })
+  }, [navigate, toast])
 
   const set = (k, v) => setDraft((d) => ({ ...d, [k]: v }))
   // Company info lives on the agent, so two agents can represent two companies.
@@ -173,10 +195,16 @@ export default function Agents() {
   async function updateCompany() {
     if (isNew) return
     setSavingCompany(true)
-    const updated = await api.saveAgentCompany(draft.id, draft.company)
-    setDraft((d) => ({ ...d, company: updated.company }))
-    setSavingCompany(false)
-    toast('Company info updated')
+    try {
+      const updated = await api.saveAgentCompany(draft.id, draft.company)
+      setDraft((d) => ({ ...d, company: updated.company }))
+      toast('Company info updated')
+    } catch (err) {
+      // Without this the button spins forever and the save fails silently.
+      toast(`Could not save company info — ${err.message}`, 'bad')
+    } finally {
+      setSavingCompany(false)
+    }
   }
 
   async function remove() {
@@ -194,11 +222,25 @@ export default function Agents() {
       return
     }
     setConnecting(true)
-    const updated = await api.connectProvider(draft.id, draft.provider)
+    let updated
+    try {
+      updated = await api.connectProvider(draft.id, draft.provider)
+    } catch (err) {
+      setConnecting(false)
+      if (isPlanLimit(err)) setLimitMessage(err.message)
+      else toast(err.message || 'Could not connect', 'bad')
+      return
+    }
+    // The backend hands back a consent URL for Gmail / Outlook — go there and
+    // let the provider redirect back once the user approves.
+    if (updated?.auth_url) {
+      window.location.href = updated.auth_url
+      return
+    }
     setDraft({ ...updated })
     setSavedProvider(updated.provider)
     setConnecting(false)
-    toast(`${draft.provider} connected`)
+    setConnectedProvider(draft.provider)
   }
 
   async function disconnect() {
@@ -497,28 +539,14 @@ export default function Agents() {
           {displayProvider && (
             <div className="mt-6">
               <div className="rounded-[8px] border border-line bg-subtle p-6">
-                <p className="text-[17px] text-ink">
-                  {displayProvider === 'imap' ? 'Custom IMAP/SMTP' : label(displayProvider)}
-                </p>
+                {/* Named the same way the radio above names it, for all three. */}
+                <p className="text-[17px] text-ink">{label(displayProvider)}</p>
 
                 {connected && !providerChanged ? (
-                  <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="text-[15px] text-good-ink">
-                        Connected as <span className="font-bold">{draft.connection.email}</span>
-                      </p>
-                      {draft.connection?.detail && <p className="mt-1 text-xs text-faint">{draft.connection.detail}</p>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button type="button" className="btn-ghost" onClick={disconnect}>
-                        Disconnect
-                      </button>
-                      <button type="button" className="btn-secondary" onClick={connect} disabled={connecting}>
-                        <IconKey size={15} />
-                        {connecting ? 'Connecting…' : 'Reconnect'}
-                      </button>
-                    </div>
-                  </div>
+                  // A linked mailbox states just that: provider and address.
+                  <p className="mt-2 text-[15px] text-good-ink break-words">
+                    Connected as <span className="font-bold">{draft.connection.email}</span>
+                  </p>
                 ) : (
                   <>
                     {failed && !providerChanged ? (
@@ -537,11 +565,19 @@ export default function Agents() {
                           saving={connecting}
                           onSave={async (creds) => {
                             setConnecting(true)
-                            const updated = await api.saveImap(draft.id, creds)
-                            setDraft({ ...updated })
-                            setSavedProvider(updated.provider)
-                            setConnecting(false)
-                            toast('IMAP settings saved — mailbox connected')
+                            try {
+                              const updated = await api.saveImap(draft.id, creds)
+                              setDraft({ ...updated })
+                              setSavedProvider(updated.provider)
+                              setConnectedProvider('IMAP')
+                            } catch (err) {
+                              // A plan that is full comes back as a sentence
+                              // worth showing; anything else is a toast.
+                              if (isPlanLimit(err)) setLimitMessage(err.message)
+                              else toast(err.message || 'Could not connect', 'bad')
+                            } finally {
+                              setConnecting(false)
+                            }
                           }}
                         />
                       ) : (
@@ -559,17 +595,6 @@ export default function Agents() {
                   </>
                 )}
 
-                {connected && !providerChanged && (
-                  <div className="mt-5 pt-4 border-t border-line grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <Meta
-                      label="Watcher"
-                      value={<StatusBadge value={draft.watcher === 'running' ? 'active' : draft.watcher === 'error' ? 'error' : 'paused'} />}
-                    />
-                    <Meta label="Poll bookmark" value={<span className="font-mono text-xs text-ink">{draft.bookmark}</span>} />
-                    <Meta label="Last checked" value={<span className="text-xs text-ink">{draft.last_checked}</span>} />
-                    <Meta label="Sent (30d)" value={<span className="text-xs text-ink tabular-nums">{draft.sent_30d}</span>} />
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -646,57 +671,50 @@ export default function Agents() {
       </Modal>
 
       {/* Provider switch confirmation */}
-      <Modal
+      <AlertDialog
         open={confirmSwitch}
-        onClose={() => setConfirmSwitch(false)}
+        variant="warning"
         title="Change Email Provider?"
-        width="max-w-md"
-        footer={
-          <>
-            <button className="btn-ghost" onClick={() => setConfirmSwitch(false)}>Cancel</button>
-            <button
-              className="btn"
-              style={{ background: 'var(--danger)', color: '#fff' }}
-              onClick={async (e) => {
-                setConfirmSwitch(false)
-                await submit(e)
-              }}
-            >
-              Yes, switch provider
-            </button>
-          </>
-        }
-      >
-        <p className="text-sm text-muted">
-          Switching from <span className="font-semibold text-ink">{label(activeProvider)}</span> to{' '}
-          <span className="font-semibold text-ink">{label(selectedProvider)}</span> will disconnect your existing{' '}
-          {label(activeProvider)} connection. Do you want to continue?
-        </p>
-      </Modal>
+        message={`Switching from ${label(activeProvider)} to ${label(selectedProvider)} will disconnect your existing ${label(activeProvider)} connection. Do you want to continue?`}
+        confirmLabel="Yes, switch provider"
+        onConfirm={async () => {
+          setConfirmSwitch(false)
+          await submit({ preventDefault() {} })
+        }}
+        onClose={() => setConfirmSwitch(false)}
+      />
 
-      <Modal
+      <AlertDialog
         open={confirmDelete}
+        variant="danger"
+        title="Delete this agent?"
+        message={`${draft.name} and its email connection will be removed. Stored conversations stay in the local database.`}
+        confirmLabel="Delete agent"
+        onConfirm={remove}
         onClose={() => setConfirmDelete(false)}
-        title="Delete agent"
-        width="max-w-md"
-        footer={
-          <>
-            <button className="btn-ghost" onClick={() => setConfirmDelete(false)}>Cancel</button>
-            <button
-              className="btn"
-              onClick={remove}
-              style={{ background: 'var(--danger)', color: '#fff' }}
-            >
-              Delete
-            </button>
-          </>
+      />
+
+      {/* Plan limit — the backend refuses the connection, this explains why. */}
+      <AlertDialog
+        open={!!limitMessage}
+        variant="warning"
+        title="Mailbox limit reached"
+        message={limitMessage}
+        okLabel="Got it"
+        onClose={() => setLimitMessage('')}
+      />
+
+      {/* Mailbox linked — shown after the provider redirects back. */}
+      <SuccessDialog
+        open={!!connectedProvider}
+        onClose={() => setConnectedProvider('')}
+        message={
+          connectedProvider.toLowerCase() === 'imap'
+            ? // No OAuth token to refresh — IMAP runs on stored credentials.
+              'IMAP mailbox connected! Credentials saved to the local config.'
+            : `${shortName(connectedProvider.toLowerCase())} connected! Tokens will refresh automatically.`
         }
-      >
-        <p className="text-sm text-muted">
-          <span className="font-semibold text-ink">{draft.name}</span> and its email connection will be removed. Stored
-          conversations stay in the local database.
-        </p>
-      </Modal>
+      />
     </>
   )
 }
@@ -708,15 +726,6 @@ function Field({ label, id, children }) {
         {label}
       </label>
       {children}
-    </div>
-  )
-}
-
-function Meta({ label, value }) {
-  return (
-    <div>
-      <div className="text-[11px] text-faint mb-1">{label}</div>
-      {value}
     </div>
   )
 }

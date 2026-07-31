@@ -45,6 +45,14 @@
   --chart-from: #3a4654;
   --chart-to: #0f1419;
 
+  /* Chart series, in fixed order — slot 1 is always Sent, slot 2 always
+     Replies, so a series keeps its colour whatever else is on the plot.
+     Checked with the palette validator against this surface: lightness band,
+     chroma floor, CVD separation (protan ΔE 31.5 · tritan 34.6) and 3:1
+     contrast all pass. Re-run the validator if these ever change. */
+  --series-1: #6366f1;
+  --series-2: #ea580c;
+
   /* Filled KPI cards — each a gradient, white text on top. */
   --kpi-indigo: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
   --kpi-sky: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
@@ -111,6 +119,11 @@
   --action-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.6);
   --chart-from: #a5b4fc;
   --chart-to: #4f46e5;
+
+  /* Dark mode is its own selection from the same hues, not a flip of the light
+     steps — re-validated against #16162b (protan ΔE 29.9 · tritan 33.5). */
+  --series-1: #6d78f0;
+  --series-2: #ea580c;
 
   --good: #34d399;
   --good-soft: rgba(52, 211, 153, 0.16);
@@ -429,4 +442,58 @@
   .page-body {
     @apply px-4 sm:px-6 lg:px-8 pb-10 animate-fade-up;
   }
+}
+
+/* Toasts sit at the top, so they arrive from above rather than below. */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-toast-in {
+  animation: toast-in 0.2s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-toast-in { animation: none; }
+}
+
+/* Animated glyph used by AlertDialog — ring first, then the mark. Both take
+   their colour from the svg's `color`, so one set of rules serves the success,
+   warning, danger and info variants. */
+@keyframes tick-ring-draw {
+  from { stroke-dashoffset: 252; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes tick-mark-draw {
+  from { stroke-dashoffset: 60; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes alert-dot-in {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: none; }
+}
+.alert-ring {
+  stroke: currentColor;
+  opacity: 0.35;
+  stroke-dasharray: 252;
+  animation: tick-ring-draw 0.55s ease-out both;
+}
+.alert-mark {
+  stroke: currentColor;
+  stroke-dasharray: 60;
+  animation: tick-mark-draw 0.35s ease-out 0.35s both;
+}
+.alert-dot {
+  fill: currentColor;
+  transform-origin: center;
+  animation: alert-dot-in 0.25s ease-out 0.6s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .alert-ring,
+  .alert-mark,
+  .alert-dot {
+    animation: none;
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  .alert-ring { opacity: 0.35; }
 }

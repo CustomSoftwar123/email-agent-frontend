@@ -37,14 +37,29 @@ export default function ChoosePlan() {
       setPlans([])
       setError(e.message)
     })
+
+    // Someone who has just paid lands back on /billing, but the route guard
+    // sends them here while their plan still reads as unchosen. Settle any open
+    // checkout first — if it has been paid, refresh() lets the guard release
+    // them. Costs nothing when there is no checkout outstanding.
+    api.confirmPayment()
+      .then((res) => { if (res.activated) return refresh() })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function choose(plan) {
     setError('')
     setBusyId(plan.id)
     try {
-      await api.choosePlan(plan.id)
-      await refresh()          // pull the new plan_status before the guard re-runs
+      const res = await api.choosePlan(plan.id)
+      if (res.checkout_url) {
+        // Hand off to Stripe. Nothing is granted until their webhook confirms
+        // the payment, so there is no state to update before leaving.
+        window.location.href = res.checkout_url
+        return
+      }
+      await refresh()          // a free plan is active already
       navigate('/', { replace: true })
     } catch (e) {
       setError(e.message || 'Could not select that plan.')
@@ -113,8 +128,8 @@ export default function ChoosePlan() {
         )}
 
         <p className="mt-10 text-center text-xs text-faint">
-          Choosing a plan does not take payment. Your account is marked pending until
-          your administrator confirms it.
+          You will be taken to Stripe to pay for one {plans[0]?.interval_unit || 'month'}.
+          Your account is activated as soon as the payment goes through.
         </p>
       </main>
     </div>
@@ -146,9 +161,6 @@ function PlanOption({ plan, busy, disabled, onChoose }) {
             ? 'Unlimited AI replies'
             : `${plan.reply_limit.toLocaleString()} AI replies per ${plan.interval_unit}`}
         </li>
-        {plan.trial_days > 0 && (
-          <li className="text-info-ink font-medium">{plan.trial_days} days free to start</li>
-        )}
       </ul>
 
       {plan.features?.length > 0 && (

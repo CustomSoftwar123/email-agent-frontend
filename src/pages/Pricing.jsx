@@ -18,7 +18,7 @@ import { api } from '../api/client.js'
 // highlighted state to set, so the editor does not ask about either.
 const BLANK = {
   name: '', description: '', price: '', currency: 'USD', interval_unit: 'month',
-  mailbox_limit: '', reply_limit: '', trial_days: 0, features: '',
+  mailbox_limit: '', reply_limit: '', features: '',
   is_active: true, sort_order: 0,
 }
 
@@ -51,7 +51,6 @@ export default function Pricing() {
       ...draft,
       price: Number(draft.price) || 0,
       sort_order: Number(draft.sort_order) || 0,
-      trial_days: Number(draft.trial_days) || 0,
       // Blank means "no cap" — the API stores NULL rather than zero.
       mailbox_limit: draft.mailbox_limit === '' ? null : Number(draft.mailbox_limit),
       reply_limit: draft.reply_limit === '' ? null : Number(draft.reply_limit),
@@ -364,7 +363,7 @@ function AccountDetail({ accountId, onClose, onSaved }) {
 
             <p className="mt-1 text-xs text-faint">
               {detail.period_ends_at
-                ? `${detail.plan_status === 'trialing' ? 'Trial ends' : 'Period ends'} ` +
+                ? `Paid until ` +
                   `${String(detail.period_ends_at).slice(0, 10)}` +
                   (detail.days_left != null ? ` · ${detail.days_left} days left` : '')
                 : 'No billing period open'}
@@ -491,7 +490,6 @@ function PlanCard({ plan, subscribers, onEdit, onDelete }) {
             ? 'Unlimited AI replies'
             : `${plan.reply_limit} AI replies per ${plan.interval_unit}`}
         </li>
-        {plan.trial_days > 0 && <li className="text-info-ink">{plan.trial_days}-day free trial</li>}
       </ul>
 
       {plan.features?.length > 0 && (
@@ -606,12 +604,6 @@ function PlanEditor({ draft, onCancel, onSave }) {
             <label className="label" htmlFor="plan-currency">Currency</label>
             <input id="plan-currency" className="input" maxLength={3} value={form.currency}
                    onChange={set('currency')} placeholder="USD" />
-          </div>
-          <div>
-            <label className="label" htmlFor="plan-trial">Free trial (days)</label>
-            <input id="plan-trial" className="input" type="number" min="0"
-                   value={form.trial_days} onChange={set('trial_days')} placeholder="0" />
-            <p className="hint mt-1.5">0 for no trial.</p>
           </div>
         </div>
 

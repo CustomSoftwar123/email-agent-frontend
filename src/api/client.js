@@ -71,6 +71,9 @@ export const api = {
   getAvailablePlans:()     => USE_MOCK ? mock.getAvailablePlans() : http('GET',    '/api/plans'),
   choosePlan:       (id)   => USE_MOCK ? mock.choosePlan(id)      : http('POST',   '/api/plans/choose', { plan_id: id }),
   getBilling:       ()     => USE_MOCK ? mock.getBilling()        : http('GET',    '/api/billing'),
+  // Asks the backend to check Stripe for a payment we may not have heard about
+  // yet. Safe to call at any time — it does nothing when there is no open checkout.
+  confirmPayment:   ()     => USE_MOCK ? { activated: 0 }         : http('POST',   '/api/billing/confirm'),
 
   getStatus:        ()     => USE_MOCK ? mock.getStatus()         : http('GET',    '/api/status'),
   getActivity:      ()     => USE_MOCK ? mock.getActivity()       : http('GET',    '/api/activity'),

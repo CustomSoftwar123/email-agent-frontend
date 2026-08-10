@@ -17,8 +17,7 @@ const day = (value) =>
   }) : '—'
 
 const STATUS_COPY = {
-  trialing: ['Free trial', 'bg-info-soft text-info-ink'],
-  pending: ['Awaiting confirmation', 'bg-warn-soft text-warn-ink'],
+  pending: ['Payment not completed', 'bg-warn-soft text-warn-ink'],
   active: ['Active', 'bg-good-soft text-good-ink'],
   expired: ['Expired', 'bg-danger-soft text-danger-ink'],
   suspended: ['Suspended', 'bg-danger-soft text-danger-ink'],
@@ -37,13 +36,35 @@ export default function Billing() {
 
   useEffect(() => {
     load().catch((e) => toast(e.message, 'bad'))
+
+    // Stripe sends the browser back here. The result shown is whatever the
+    // reloaded /api/billing says — coming back from Stripe is not itself proof
+    // of payment, only their webhook is, and it may land a moment later.
+    const params = new URLSearchParams(window.location.search)
+    if (params.has('paid')) {
+      api.confirmPayment()
+        .then((res) => toast(res.activated
+          ? 'Payment received — your plan is active.'
+          : 'Payment is still being confirmed. This page will catch up shortly.'))
+        .catch(() => toast('Could not confirm the payment yet.', 'bad'))
+        .then(() => Promise.all([load().catch(() => {}), refresh()]))
+    } else if (params.has('cancelled')) {
+      toast('Payment cancelled — nothing was charged.', 'bad')
+    }
+    if (params.has('paid') || params.has('cancelled')) {
+      window.history.replaceState({}, '', window.location.pathname)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function switchTo(plan) {
     setBusy(true)
     try {
-      await api.choosePlan(plan.id)
+      const res = await api.choosePlan(plan.id)
+      if (res.checkout_url) {
+        window.location.href = res.checkout_url   // Stripe takes it from here
+        return
+      }
       await Promise.all([load(), refresh()])
       setChanging(null)
       toast(`Moved to ${plan.name}`)
@@ -135,7 +156,7 @@ export default function Billing() {
                 <dl className="mt-6 pt-5 border-t border-line grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <Fact label="Period started" value={day(usage.period_started_at)} />
                   <Fact
-                    label={usage.plan_status === 'trialing' ? 'Trial ends' : 'Renews on'}
+                    label="Paid until"
                     value={day(usage.period_ends_at)}
                   />
                   <Fact

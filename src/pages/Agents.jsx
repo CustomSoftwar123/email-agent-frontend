@@ -48,7 +48,7 @@ const REGIONS = [
 const BLANK_COMPANY = {
   name: '', email: '', address: '', country: '', region: '',
   description: '', pricing: '', business_type: 'Service',
-  service_knowledge: '', product_knowledge: '', global_prompt: '',
+  service_knowledge: '', product_knowledge: '', global_prompt: '', escalation_email: '',
 }
 
 const BLANK = {
@@ -502,6 +502,20 @@ export default function Agents() {
                 onChange={(e) => setCompany(isProduct ? 'product_knowledge' : 'service_knowledge', e.target.value)}
                 placeholder={'1. Custom Software Development\n2. Web Application Development'}
               />
+            </div>
+
+            <div className="mt-5">
+              {/* Where an out-of-scope message is forwarded. Blank = decline only. */}
+              <Field label="SuperAdmin Email" id="co-escalation">
+                <input
+                  id="co-escalation"
+                  className="input"
+                  type="email"
+                  value={company.escalation_email}
+                  onChange={(e) => setCompany('escalation_email', e.target.value)}
+                  placeholder="you@yourcompany.com"
+                />
+              </Field>
             </div>
 
           </Card>

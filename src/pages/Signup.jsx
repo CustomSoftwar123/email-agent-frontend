@@ -64,7 +64,7 @@ export default function Signup() {
           icon={<IconRobot size={16} />}
           autoComplete="name"
           autoFocus
-          placeholder="Zain Malik"
+          placeholder="Enter your name"
           value={form.name}
           onChange={set('name')}
         />
@@ -76,7 +76,7 @@ export default function Signup() {
           type="email"
           autoComplete="email"
           required
-          placeholder="you@company.com"
+          placeholder="Enter your email"
           value={form.email}
           onChange={set('email')}
         />

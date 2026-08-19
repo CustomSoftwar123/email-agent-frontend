@@ -500,7 +500,7 @@ export default function Agents() {
                 rows={4}
                 value={isProduct ? company.product_knowledge : company.service_knowledge}
                 onChange={(e) => setCompany(isProduct ? 'product_knowledge' : 'service_knowledge', e.target.value)}
-                placeholder={'1. Custom Software Development\n2. Web Application Development'}
+                // placeholder={'1. Custom Software Development\n2. Web Application Development'}
               />
             </div>
 
@@ -513,7 +513,7 @@ export default function Agents() {
                   type="email"
                   value={company.escalation_email}
                   onChange={(e) => setCompany('escalation_email', e.target.value)}
-                  placeholder="you@yourcompany.com"
+                  // placeholder="you@yourcompany.com"
                 />
               </Field>
             </div>

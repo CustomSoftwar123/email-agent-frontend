@@ -573,15 +573,14 @@ function PlanEditor({ draft, onCancel, onSave }) {
       <div className="space-y-4">
         <div>
           <label className="label" htmlFor="plan-name">Plan name</label>
-          <input id="plan-name" className="input" value={form.name} onChange={set('name')}
-                 placeholder="Growth" />
+          <input id="plan-name" className="input" value={form.name} onChange={set('name')} />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label" htmlFor="plan-price">Price</label>
             <input id="plan-price" className="input" type="number" min="0" step="0.01"
-                   value={form.price} onChange={set('price')} placeholder="79" />
+                   value={form.price} onChange={set('price')} />
           </div>
           <div>
             <label className="label" htmlFor="plan-interval">Billed</label>
@@ -596,7 +595,7 @@ function PlanEditor({ draft, onCancel, onSave }) {
         <div>
           <label className="label" htmlFor="plan-desc">Short description</label>
           <input id="plan-desc" className="input" maxLength={255} value={form.description}
-                 onChange={set('description')} placeholder="For teams running a few mailboxes" />
+                 onChange={set('description')} />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -623,9 +622,8 @@ function PlanEditor({ draft, onCancel, onSave }) {
 
         <div>
           <label className="label" htmlFor="plan-features">Features</label>
-          {/* The placeholder already shows one feature per line. */}
           <textarea id="plan-features" className="input min-h-[110px]" value={form.features}
-                    onChange={set('features')} placeholder={'5 mailboxes\nAI auto-replies\nPriority support'} />
+                    onChange={set('features')} />
         </div>
 
       </div>

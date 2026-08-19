@@ -60,7 +60,7 @@ export default function Login() {
           autoComplete="email"
           autoFocus={!notice}
           required
-          placeholder="you@company.com"
+          placeholder="Enter your email"
           value={form.email}
           onChange={set('email')}
         />

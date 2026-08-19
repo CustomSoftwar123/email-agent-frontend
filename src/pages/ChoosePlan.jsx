@@ -128,7 +128,9 @@ export default function ChoosePlan() {
         )}
 
         <p className="mt-10 text-center text-xs text-faint">
-          You will be taken to Stripe to pay for one {plans[0]?.interval_unit || 'month'}.
+          {/* `plans` is null until the fetch lands, so it needs its own `?.` —
+              indexing straight into it crashes the whole page on first render. */}
+          You will be taken to Stripe to pay for one {plans?.[0]?.interval_unit || 'month'}.
           Your account is activated as soon as the payment goes through.
         </p>
       </main>
